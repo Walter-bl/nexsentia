@@ -1,0 +1,192 @@
+name: Deploy to AWS Elastic Beanstalk
+
+on:
+  push:
+    branches:
+      - main
+      - production
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  NODE_VERSION: '22.x'
+  AWS_REGION: eu-north-1
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+        continue-on-error: true
+
+  deploy:
+    name: Deploy to Elastic Beanstalk
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Create deployment package
+        run: |
+          # Create a deployment directory
+          mkdir -p deploy
+
+          # Copy necessary files (node_modules will be installed on EB via prebuild hook)
+          cp -r dist deploy/
+          cp -r .platform deploy/
+          cp -r .ebextensions deploy/
+          cp package*.json deploy/
+          cp Procfile deploy/
+
+          # Create zip file - much faster without node_modules
+          cd deploy
+          zip -r ../deploy.zip .
+          cd ..
+
+          echo "Deployment package created: deploy.zip"
+          ls -lh deploy.zip
+
+      - name: Get timestamp
+        id: timestamp
+        run: echo "timestamp=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload package to S3
+        id: upload
+        run: |
+          S3_BUCKET="${{ secrets.EB_S3_BUCKET }}"
+          S3_KEY="Offr-backend-${{ steps.timestamp.outputs.timestamp }}.zip"
+
+          # Upload to S3 with explicit region
+          aws s3 cp deploy.zip s3://${S3_BUCKET}/${S3_KEY} --region ${{ env.AWS_REGION }}
+
+          # Verify upload
+          aws s3 ls s3://${S3_BUCKET}/${S3_KEY} --region ${{ env.AWS_REGION }}
+
+          echo "s3_key=${S3_KEY}" >> $GITHUB_OUTPUT
+          echo "Uploaded to s3://${S3_BUCKET}/${S3_KEY}"
+
+      - name: Create Elastic Beanstalk application version
+        run: |
+          aws elasticbeanstalk create-application-version \
+            --application-name "${{ secrets.EB_APPLICATION_NAME }}" \
+            --version-label "Offr-backend-${{ steps.timestamp.outputs.timestamp }}" \
+            --description "Deploy from GitHub Actions - Commit: ${{ github.sha }}" \
+            --source-bundle S3Bucket="${{ secrets.EB_S3_BUCKET }}",S3Key="${{ steps.upload.outputs.s3_key }}" \
+            --region ${{ env.AWS_REGION }} \
+            --auto-create-application
+
+      - name: Deploy to Elastic Beanstalk
+        run: |
+          aws elasticbeanstalk update-environment \
+            --application-name "${{ secrets.EB_APPLICATION_NAME }}" \
+            --environment-name "${{ secrets.EB_ENVIRONMENT_NAME }}" \
+            --version-label "Offr-backend-${{ steps.timestamp.outputs.timestamp }}" \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting for deployment to complete..."
+          aws elasticbeanstalk wait environment-updated \
+            --application-name "${{ secrets.EB_APPLICATION_NAME }}" \
+            --environment-name "${{ secrets.EB_ENVIRONMENT_NAME }}" \
+            --region ${{ env.AWS_REGION }}
+
+          echo "Deployment completed successfully!"
+
+      - name: Get environment info
+        if: success()
+        run: |
+          aws elasticbeanstalk describe-environments \
+            --application-name "${{ secrets.EB_APPLICATION_NAME }}" \
+            --environment-names "${{ secrets.EB_ENVIRONMENT_NAME }}" \
+            --region ${{ env.AWS_REGION }} \
+            --query 'Environments[0].[EnvironmentName,Status,Health,CNAME]' \
+            --output table
+
+      - name: Cleanup old versions
+        if: success()
+        run: |
+          echo "Cleaning up old application versions..."
+
+          # Keep only the last 10 versions
+          aws elasticbeanstalk describe-application-versions \
+            --application-name "${{ secrets.EB_APPLICATION_NAME }}" \
+            --region ${{ env.AWS_REGION }} \
+            --query 'sort_by(ApplicationVersions, &DateCreated)[:-10].VersionLabel' \
+            --output text | \
+          xargs -n1 -I {} aws elasticbeanstalk delete-application-version \
+            --application-name "${{ secrets.EB_APPLICATION_NAME }}" \
+            --version-label {} \
+            --region ${{ env.AWS_REGION }} \
+            --delete-source-bundle || true
+
+          echo "Cleanup completed"
+
+  notify:
+    name: Notify deployment status
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: always()
+
+    steps:
+      - name: Deployment Success Notification
+        if: needs.deploy.result == 'success'
+        run: |
+          echo "✅ Deployment to Elastic Beanstalk succeeded!"
+          echo "Environment: ${{ secrets.EB_ENVIRONMENT_NAME }}"
+          echo "Commit: ${{ github.sha }}"
+
+      - name: Deployment Failure Notification
+        if: needs.deploy.result == 'failure'
+        run: |
+          echo "❌ Deployment to Elastic Beanstalk failed!"
+          echo "Check the logs for details"
+          exit 1
