@@ -7,6 +7,7 @@ import jwtConfig from './config/security/jwt.config';
 import bcryptConfig from './config/security/bcrypt.config';
 import s3Config from './config/storage/s3.config';
 import emailConfig from './config/email/email.config';
+import { AppController } from './app.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
@@ -48,5 +49,6 @@ import { EmailModule } from './modules/email/email.module';
     StorageModule,
     EmailModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}
