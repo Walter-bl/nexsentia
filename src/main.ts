@@ -120,8 +120,8 @@ async function bootstrap() {
     ║           NEXSENTIA API STARTED                  ║
     ║                                                  ║
     ║   Application: http://localhost:${port}/${apiPrefix}      ║
-    ║   Documentation: http://localhost:${port}/api/docs    ║
-    ║   Environment: ${configService.get<string>('NODE_ENV')}                  ║
+    ║   Documentation: http://localhost:${port}/api/docs  ║
+    ║   Environment: ${configService.get<string>('NODE_ENV')}                      ║
     ║                                                  ║
     ╚══════════════════════════════════════════════════╝
   `);

@@ -9,7 +9,7 @@ import jwtConfig from './config/security/jwt.config';
 import bcryptConfig from './config/security/bcrypt.config';
 import s3Config from './config/storage/s3.config';
 import emailConfig from './config/email/email.config';
-import { AppController } from './app.controller';
+import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
@@ -38,7 +38,7 @@ import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.int
         host: configService.get('database.host'),
         port: configService.get('database.port'),
         username: configService.get('database.username'),
-        password: configService.get('database.password'),
+        password: configService.get('database.password') || undefined,
         database: configService.get('database.database'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: configService.get('database.synchronize'),
@@ -48,6 +48,7 @@ import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.int
     }),
 
     // Feature modules
+    HealthModule,
     AuthModule,
     UsersModule,
     TenantsModule,
@@ -55,7 +56,7 @@ import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.int
     StorageModule,
     EmailModule,
   ],
-  controllers: [AppController],
+  controllers: [],
   providers: [
     {
       provide: APP_INTERCEPTOR,
