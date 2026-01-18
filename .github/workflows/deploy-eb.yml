@@ -117,7 +117,7 @@ jobs:
         run: |
           aws elasticbeanstalk create-application-version \
             --application-name "${{ secrets.EB_APPLICATION_NAME }}" \
-            --version-label "Offr-backend-${{ steps.timestamp.outputs.timestamp }}" \
+            --version-label "NexSentia-backend-${{ steps.timestamp.outputs.timestamp }}" \
             --description "Deploy from GitHub Actions - Commit: ${{ github.sha }}" \
             --source-bundle S3Bucket="${{ secrets.EB_S3_BUCKET }}",S3Key="${{ steps.upload.outputs.s3_key }}" \
             --region ${{ env.AWS_REGION }} \
@@ -128,7 +128,7 @@ jobs:
           aws elasticbeanstalk update-environment \
             --application-name "${{ secrets.EB_APPLICATION_NAME }}" \
             --environment-name "${{ secrets.EB_ENVIRONMENT_NAME }}" \
-            --version-label "Offr-backend-${{ steps.timestamp.outputs.timestamp }}" \
+            --version-label "NexSentia-backend-${{ steps.timestamp.outputs.timestamp }}" \
             --region ${{ env.AWS_REGION }}
 
       - name: Wait for deployment
