@@ -180,13 +180,13 @@ jobs:
       - name: Deployment Success Notification
         if: needs.deploy.result == 'success'
         run: |
-          echo "✅ Deployment to Elastic Beanstalk succeeded!"
+          echo "Deployment to Elastic Beanstalk succeeded!"
           echo "Environment: ${{ secrets.EB_ENVIRONMENT_NAME }}"
           echo "Commit: ${{ github.sha }}"
 
       - name: Deployment Failure Notification
         if: needs.deploy.result == 'failure'
         run: |
-          echo "❌ Deployment to Elastic Beanstalk failed!"
+          echo "Deployment to Elastic Beanstalk failed!"
           echo "Check the logs for details"
           exit 1

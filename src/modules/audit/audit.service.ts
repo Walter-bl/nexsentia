@@ -19,9 +19,23 @@ export class AuditService {
   }
 
   async log(
-    tenantId: number,
-    action: AuditAction,
-    resource: string,
+    tenantIdOrOptions: number | {
+      userId?: number;
+      tenantId?: number;
+      resourceId?: number;
+      action?: string;
+      resource?: string;
+      metadata?: Record<string, any>;
+      changes?: { before?: Record<string, any>; after?: Record<string, any> };
+      ipAddress?: string;
+      userAgent?: string;
+      httpMethod?: string;
+      requestPath?: string;
+      statusCode?: number;
+      errorMessage?: string;
+    },
+    action?: AuditAction,
+    resource?: string,
     options: {
       userId?: number;
       resourceId?: number;
@@ -35,14 +49,29 @@ export class AuditService {
       errorMessage?: string;
     } = {},
   ): Promise<AuditLog> {
-    const auditLog = this.auditLogRepository.create({
-      tenantId,
-      action,
-      resource,
-      ...options,
-    });
+    // Support both signatures:
+    // 1. log(tenantId, action, resource, options) - old signature
+    // 2. log(options) - new signature from interceptor
 
-    return await this.auditLogRepository.save(auditLog);
+    let auditData: any;
+
+    if (typeof tenantIdOrOptions === 'number') {
+      // Old signature: log(tenantId, action, resource, options)
+      auditData = {
+        tenantId: tenantIdOrOptions,
+        action,
+        resource,
+        ...options,
+      };
+    } else {
+      // New signature: log(options)
+      auditData = tenantIdOrOptions;
+    }
+
+    const auditLog = this.auditLogRepository.create(auditData);
+    const savedLog = await this.auditLogRepository.save(auditLog);
+    // Ensure we return a single AuditLog, not an array
+    return Array.isArray(savedLog) ? savedLog[0] : savedLog;
   }
 
   async findAll(tenantId: number, queryDto: QueryAuditLogDto) {
@@ -126,5 +155,89 @@ export class AuditService {
       .execute();
 
     return result.affected || 0;
+  }
+
+  async exportToCsv(tenantId: number, queryDto: QueryAuditLogDto): Promise<string> {
+    const { fromDate, toDate, userId, action, resource, resourceId } = queryDto;
+
+    const where: FindOptionsWhere<AuditLog> = { tenantId };
+
+    if (userId) {
+      where.userId = userId;
+    }
+
+    if (action) {
+      where.action = action;
+    }
+
+    if (resource) {
+      where.resource = resource;
+    }
+
+    if (resourceId) {
+      where.resourceId = resourceId;
+    }
+
+    if (fromDate && toDate) {
+      where.createdAt = Between(new Date(fromDate), new Date(toDate));
+    } else if (fromDate) {
+      where.createdAt = Between(new Date(fromDate), new Date());
+    }
+
+    const logs = await this.auditLogRepository.find({
+      where,
+      relations: ['user'],
+      order: { createdAt: 'DESC' },
+    });
+
+    // CSV Headers
+    const headers = [
+      'ID',
+      'Timestamp',
+      'User ID',
+      'User Email',
+      'Action',
+      'Resource',
+      'Resource ID',
+      'HTTP Method',
+      'Request Path',
+      'Status Code',
+      'IP Address',
+      'User Agent',
+      'Error Message',
+    ];
+
+    // Build CSV rows
+    const rows = logs.map((log) => [
+      log.id,
+      log.createdAt.toISOString(),
+      log.userId || '',
+      log.user?.email || '',
+      log.action,
+      log.resource,
+      log.resourceId || '',
+      log.httpMethod || '',
+      log.requestPath || '',
+      log.statusCode || '',
+      log.ipAddress || '',
+      log.userAgent || '',
+      log.errorMessage || '',
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.map((cell) => this.escapeCsvCell(cell.toString())).join(',')),
+    ].join('\n');
+
+    return csvContent;
+  }
+
+  private escapeCsvCell(cell: string): string {
+    // Escape double quotes and wrap in quotes if contains comma, newline, or quote
+    if (cell.includes(',') || cell.includes('\n') || cell.includes('"')) {
+      return `"${cell.replace(/"/g, '""')}"`;
+    }
+    return cell;
   }
 }

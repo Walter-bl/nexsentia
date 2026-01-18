@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import appConfig from './config/app.config';
 import databaseConfig from './config/database/database.config';
 import jwtConfig from './config/security/jwt.config';
@@ -14,6 +16,7 @@ import { TenantsModule } from './modules/tenants/tenants.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { EmailModule } from './modules/email/email.module';
+import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.interceptor';
 
 @Module({
   imports: [
@@ -23,6 +26,9 @@ import { EmailModule } from './modules/email/email.module';
       load: [appConfig, databaseConfig, jwtConfig, bcryptConfig, s3Config, emailConfig],
       envFilePath: ['.env.local', '.env'],
     }),
+
+    // Scheduler for cron jobs
+    ScheduleModule.forRoot(),
 
     // Database
     TypeOrmModule.forRootAsync({
@@ -50,5 +56,11 @@ import { EmailModule } from './modules/email/email.module';
     EmailModule,
   ],
   controllers: [AppController],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditLoggingInterceptor,
+    },
+  ],
 })
 export class AppModule {}
