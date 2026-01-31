@@ -19,6 +19,7 @@ import { EmailModule } from './modules/email/email.module';
 import { JiraModule } from './modules/jira/jira.module';
 import { SlackModule } from './modules/slack/slack.module';
 import { TeamsModule } from './modules/teams/teams.module';
+import { ServiceNowModule } from './modules/servicenow/servicenow.module';
 import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.interceptor';
 
 @Module({
@@ -61,6 +62,7 @@ import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.int
     JiraModule,
     SlackModule,
     TeamsModule,
+    ServiceNowModule,
   ],
   controllers: [],
   providers: [
