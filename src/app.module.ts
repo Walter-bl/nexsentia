@@ -16,6 +16,9 @@ import { TenantsModule } from './modules/tenants/tenants.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { EmailModule } from './modules/email/email.module';
+import { JiraModule } from './modules/jira/jira.module';
+import { SlackModule } from './modules/slack/slack.module';
+import { TeamsModule } from './modules/teams/teams.module';
 import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.interceptor';
 
 @Module({
@@ -55,6 +58,9 @@ import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.int
     AuditModule,
     StorageModule,
     EmailModule,
+    JiraModule,
+    SlackModule,
+    TeamsModule,
   ],
   controllers: [],
   providers: [

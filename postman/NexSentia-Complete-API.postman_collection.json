@@ -1,0 +1,2024 @@
+{
+	"info": {
+		"_postman_id": "nexsentia-complete-api",
+		"name": "NexSentia - Complete API",
+		"description": "Complete API collection for NexSentia Platform - Organizational & Business Weak-Signal Detection\n\nIncludes: Authentication, Users, Tenants, Audit Logs, Jira Integration, Slack Integration, and Teams Integration",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "nexsentia-v1"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "tenant_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "connection_id",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Root Health Check",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "3000",
+							"path": [""]
+						},
+						"description": "API root endpoint - Returns basic API information and health status"
+					},
+					"response": []
+				},
+				{
+					"name": "Health Endpoint",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "3000",
+							"path": ["health"]
+						},
+						"description": "Health check endpoint for monitoring services"
+					},
+					"response": []
+				},
+				{
+					"name": "Ping",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/ping",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "3000",
+							"path": ["ping"]
+						},
+						"description": "Simple ping endpoint to test connectivity"
+					},
+					"response": []
+				}
+			],
+			"description": "Public endpoints for API health monitoring"
+		},
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', response.tokens.accessToken);",
+									"    pm.collectionVariables.set('refresh_token', response.tokens.refreshToken);",
+									"    pm.collectionVariables.set('user_id', response.user.id);",
+									"    pm.collectionVariables.set('tenant_id', response.user.tenantId);",
+									"    console.log('Registered successfully! Tokens saved.');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"password\": \"SecureP@ssw0rd123\",\n  \"tenantId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "register"]
+						},
+						"description": "Register a new user. Password must contain uppercase, lowercase, and number/special character.\n\n**Optional:** tenantId (if not provided, creates new tenant)"
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', response.tokens.accessToken);",
+									"    pm.collectionVariables.set('refresh_token', response.tokens.refreshToken);",
+									"    pm.collectionVariables.set('user_id', response.user.id);",
+									"    pm.collectionVariables.set('tenant_id', response.user.tenantId);",
+									"    console.log('Logged in successfully! Tokens saved.');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecureP@ssw0rd123\",\n  \"tenantId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "Login with email and password. Returns user profile and JWT tokens."
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', response.accessToken);",
+									"    pm.collectionVariables.set('refresh_token', response.refreshToken);",
+									"    console.log('Token refreshed successfully!');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/refresh",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "refresh"]
+						},
+						"description": "Refresh access token using refresh token"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "me"]
+						},
+						"description": "Get current authenticated user profile"
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "logout"]
+						},
+						"description": "Logout current user and invalidate tokens"
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"tenantId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/forgot-password",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "forgot-password"]
+						},
+						"description": "Request password reset email. Sends reset token to user's email."
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"reset-token-from-email\",\n  \"newPassword\": \"NewSecureP@ssw0rd456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/reset-password",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "reset-password"]
+						},
+						"description": "Reset password using token from email"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for registration, login, and password management"
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"jane.smith@example.com\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"password\": \"SecureP@ssw0rd123\",\n  \"roleIds\": [2],\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": ["{{base_url}}"],
+							"path": ["users"]
+						},
+						"description": "Create a new user in the tenant. Requires SUPER_ADMIN or ADMIN role.\n\n**roleIds:** Array of role IDs to assign"
+					},
+					"response": []
+				},
+				{
+					"name": "List All Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": ["{{base_url}}"],
+							"path": ["users"]
+						},
+						"description": "Get all users in the tenant. Requires 'users.read' or 'users.list' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}"]
+						},
+						"description": "Get specific user details. Requires 'users.read' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith-Updated\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}"]
+						},
+						"description": "Update user details. Requires 'users.update' permission.\n\n**Note:** Cannot update password or roleIds via this endpoint."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}"]
+						},
+						"description": "Soft delete a user. Requires SUPER_ADMIN or ADMIN role."
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Roles to User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roleIds\": [2, 3]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}/roles",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}", "roles"]
+						},
+						"description": "Assign roles to a user. Requires SUPER_ADMIN or ADMIN role."
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Roles from User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roleIds\": [3]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}/roles",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}", "roles"]
+						},
+						"description": "Remove roles from a user. Requires SUPER_ADMIN or ADMIN role."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Permissions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}/permissions",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}", "permissions"]
+						},
+						"description": "Get all permissions for a user. Requires 'users.read' permission."
+					},
+					"response": []
+				}
+			],
+			"description": "User management endpoints with role-based access control"
+		},
+		{
+			"name": "Tenants",
+			"item": [
+				{
+					"name": "Create Tenant",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Acme Corporation\",\n  \"slug\": \"acme-corp\",\n  \"contactEmail\": \"contact@acmecorp.com\",\n  \"isActive\": true,\n  \"subscriptionTier\": \"professional\",\n  \"subscriptionExpiresAt\": \"2026-12-31T23:59:59.000Z\",\n  \"settings\": {\n    \"theme\": \"light\",\n    \"notifications\": true,\n    \"timezone\": \"America/New_York\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tenants",
+							"host": ["{{base_url}}"],
+							"path": ["tenants"]
+						},
+						"description": "Create a new tenant. Requires SUPER_ADMIN role.\n\n**subscriptionTier:** free | starter | professional | enterprise\n**slug:** lowercase alphanumeric with hyphens only"
+					},
+					"response": []
+				},
+				{
+					"name": "List All Tenants",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenants",
+							"host": ["{{base_url}}"],
+							"path": ["tenants"]
+						},
+						"description": "Get all tenants. Requires SUPER_ADMIN role."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Tenants",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenants/active",
+							"host": ["{{base_url}}"],
+							"path": ["tenants", "active"]
+						},
+						"description": "Get all active tenants. Requires SUPER_ADMIN role."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tenant by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenants/{{tenant_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["tenants", "{{tenant_id}}"]
+						},
+						"description": "Get specific tenant details. Requires SUPER_ADMIN or ADMIN role."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tenant by Slug",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenants/slug/acme-corp",
+							"host": ["{{base_url}}"],
+							"path": ["tenants", "slug", "acme-corp"]
+						},
+						"description": "Get tenant by slug. Requires SUPER_ADMIN or ADMIN role."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Tenant",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Acme Corporation Updated\",\n  \"contactEmail\": \"contact@acmecorp.com\",\n  \"isActive\": true,\n  \"subscriptionTier\": \"enterprise\",\n  \"settings\": {\n    \"theme\": \"dark\",\n    \"notifications\": true\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tenants/{{tenant_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["tenants", "{{tenant_id}}"]
+						},
+						"description": "Update tenant details. Requires SUPER_ADMIN or ADMIN role."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Tenant",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenants/{{tenant_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["tenants", "{{tenant_id}}"]
+						},
+						"description": "Soft delete a tenant. Requires SUPER_ADMIN role."
+					},
+					"response": []
+				},
+				{
+					"name": "Activate Tenant",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenants/{{tenant_id}}/activate",
+							"host": ["{{base_url}}"],
+							"path": ["tenants", "{{tenant_id}}", "activate"]
+						},
+						"description": "Activate a tenant. Requires SUPER_ADMIN role."
+					},
+					"response": []
+				},
+				{
+					"name": "Deactivate Tenant",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenants/{{tenant_id}}/deactivate",
+							"host": ["{{base_url}}"],
+							"path": ["tenants", "{{tenant_id}}", "deactivate"]
+						},
+						"description": "Deactivate a tenant. Requires SUPER_ADMIN role."
+					},
+					"response": []
+				}
+			],
+			"description": "Multi-tenant management endpoints"
+		},
+		{
+			"name": "Audit Logs",
+			"item": [
+				{
+					"name": "Query Audit Logs",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/audit?page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["audit"],
+							"query": [
+								{
+									"key": "userId",
+									"value": "1",
+									"description": "Filter by user ID",
+									"disabled": true
+								},
+								{
+									"key": "action",
+									"value": "CREATE",
+									"description": "CREATE, READ, UPDATE, DELETE, LOGIN, LOGOUT",
+									"disabled": true
+								},
+								{
+									"key": "resource",
+									"value": "User",
+									"description": "Resource name",
+									"disabled": true
+								},
+								{
+									"key": "resourceId",
+									"value": "123",
+									"description": "Resource ID",
+									"disabled": true
+								},
+								{
+									"key": "fromDate",
+									"value": "2026-01-01T00:00:00Z",
+									"description": "ISO 8601 date",
+									"disabled": true
+								},
+								{
+									"key": "toDate",
+									"value": "2026-01-31T23:59:59Z",
+									"description": "ISO 8601 date",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "1-100"
+								}
+							]
+						},
+						"description": "Query audit logs with comprehensive filters. Requires AUDIT_READ permission.\n\n**Actions:** CREATE, READ, UPDATE, DELETE, LOGIN, LOGOUT, EXPORT, IMPORT"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Audit Logs for User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/audit/user/{{user_id}}?limit=50",
+							"host": ["{{base_url}}"],
+							"path": ["audit", "user", "{{user_id}}"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50",
+									"description": "Optional, max results"
+								}
+							]
+						},
+						"description": "Get all audit logs for a specific user. Requires AUDIT_READ permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Audit Logs for Resource",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/audit/resource/User/123?limit=50",
+							"host": ["{{base_url}}"],
+							"path": ["audit", "resource", "User", "123"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50",
+									"description": "Optional, max results"
+								}
+							]
+						},
+						"description": "Get all audit logs for a specific resource. Requires AUDIT_READ permission.\n\n**resource:** User, Tenant, JiraConnection, etc."
+					},
+					"response": []
+				},
+				{
+					"name": "Export Audit Logs to CSV",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/audit/export?fromDate=2026-01-01T00:00:00Z&toDate=2026-01-31T23:59:59Z",
+							"host": ["{{base_url}}"],
+							"path": ["audit", "export"],
+							"query": [
+								{
+									"key": "userId",
+									"value": "1",
+									"disabled": true
+								},
+								{
+									"key": "action",
+									"value": "CREATE",
+									"disabled": true
+								},
+								{
+									"key": "fromDate",
+									"value": "2026-01-01T00:00:00Z"
+								},
+								{
+									"key": "toDate",
+									"value": "2026-01-31T23:59:59Z"
+								}
+							]
+						},
+						"description": "Export audit logs to CSV format. Requires AUDIT_READ permission.\n\nSupports same filters as Query Audit Logs endpoint."
+					},
+					"response": []
+				}
+			],
+			"description": "Audit logging endpoints for compliance and security monitoring"
+		},
+		{
+			"name": "Jira Integration",
+			"item": [
+				{
+					"name": "OAuth",
+					"item": [
+						{
+							"name": "1. Initiate OAuth",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200) {",
+											"    const response = pm.response.json();",
+											"    pm.collectionVariables.set('oauth_state', response.state);",
+											"    console.log('Authorization URL:', response.authorizationUrl);",
+											"    console.log('Copy this URL and open it in your browser');",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/oauth/authorize?connectionName=Main Jira Instance",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "oauth", "authorize"],
+									"query": [
+										{
+											"key": "connectionName",
+											"value": "Main Jira Instance"
+										},
+										{
+											"key": "state",
+											"value": "",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Step 1: Get OAuth authorization URL. Requires ADMIN or SUPER_ADMIN role."
+							},
+							"response": []
+						},
+						{
+							"name": "2. Complete OAuth",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    pm.collectionVariables.set('connection_id', response.connection.id);",
+											"    console.log('Connection created! ID:', response.connection.id);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"code\": \"oauth-code-from-callback\",\n  \"connectionName\": \"Main Jira Instance\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/jira/oauth/complete",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "oauth", "complete"]
+								},
+								"description": "Step 2: Complete OAuth with authorization code. Creates connection."
+							},
+							"response": []
+						},
+						{
+							"name": "Get OAuth Status",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/oauth/1/status",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "oauth", "1", "status"]
+								},
+								"description": "Check OAuth token status and expiration"
+							},
+							"response": []
+						},
+						{
+							"name": "Refresh OAuth Token",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/oauth/1/refresh",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "oauth", "1", "refresh"]
+								},
+								"description": "Manually refresh OAuth token"
+							},
+							"response": []
+						},
+						{
+							"name": "Revoke OAuth Access",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/oauth/1/revoke",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "oauth", "1", "revoke"]
+								},
+								"description": "Revoke OAuth access and disconnect"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Connections",
+					"item": [
+						{
+							"name": "List All Connections",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/connections",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "connections"],
+									"query": [
+										{
+											"key": "isActive",
+											"value": "true",
+											"disabled": true
+										},
+										{
+											"key": "jiraType",
+											"value": "cloud",
+											"description": "cloud | server | datacenter",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get all Jira connections for tenant"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Connection by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/connections/1",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "connections", "1"]
+								},
+								"description": "Get specific connection details"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Connection",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Connection Name\",\n  \"isActive\": true,\n  \"syncSettings\": {\n    \"syncInterval\": 30,\n    \"autoSync\": true,\n    \"projectFilter\": [\"PROJ1\", \"PROJ2\"],\n    \"issueTypeFilter\": [\"Story\", \"Bug\"],\n    \"statusFilter\": [\"To Do\", \"In Progress\", \"Done\"],\n    \"syncComments\": true,\n    \"syncAttachments\": false,\n    \"syncWorkLogs\": false\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/jira/connections/1",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "connections", "1"]
+								},
+								"description": "Update connection settings"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Connection",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/connections/1",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "connections", "1"]
+								},
+								"description": "Soft delete connection"
+							},
+							"response": []
+						},
+						{
+							"name": "Trigger Manual Sync",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"syncType\": \"full\",\n  \"projectKeys\": [\"PROJ1\", \"PROJ2\"],\n  \"force\": false\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/jira/connections/1/sync",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "connections", "1", "sync"]
+								},
+								"description": "Trigger manual sync. syncType: full | incremental"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Sync History",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/connections/1/sync-history",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "connections", "1", "sync-history"]
+								},
+								"description": "Get synchronization history"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Issues",
+					"item": [
+						{
+							"name": "List All Issues",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/issues?page=1&limit=20",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "issues"],
+									"query": [
+										{
+											"key": "projectId",
+											"value": "1",
+											"disabled": true
+										},
+										{
+											"key": "issueType",
+											"value": "Story",
+											"disabled": true
+										},
+										{
+											"key": "status",
+											"value": "In Progress",
+											"disabled": true
+										},
+										{
+											"key": "priority",
+											"value": "High",
+											"disabled": true
+										},
+										{
+											"key": "assigneeAccountId",
+											"value": "account-id",
+											"disabled": true
+										},
+										{
+											"key": "reporterAccountId",
+											"value": "account-id",
+											"disabled": true
+										},
+										{
+											"key": "labels",
+											"value": "backend,api",
+											"disabled": true
+										},
+										{
+											"key": "search",
+											"value": "keyword",
+											"disabled": true
+										},
+										{
+											"key": "fromDate",
+											"value": "2026-01-01T00:00:00Z",
+											"disabled": true
+										},
+										{
+											"key": "toDate",
+											"value": "2026-01-31T23:59:59Z",
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20"
+										}
+									]
+								},
+								"description": "Get all issues with comprehensive filtering"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Issue by Key",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/issues/key/PROJ-123",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "issues", "key", "PROJ-123"]
+								},
+								"description": "Get issue by Jira key (e.g., PROJ-123)"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Issue by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/issues/1",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "issues", "1"]
+								},
+								"description": "Get issue by database ID"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Webhooks",
+					"item": [
+						{
+							"name": "Receive Jira Webhook",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"timestamp\": 1737296400000,\n  \"webhookEvent\": \"jira:issue_updated\",\n  \"issue_event_type_name\": \"issue_updated\",\n  \"user\": {\n    \"accountId\": \"557058:12345678-1234-1234-1234-123456789012\",\n    \"displayName\": \"John Doe\",\n    \"emailAddress\": \"john@example.com\"\n  },\n  \"issue\": {\n    \"id\": \"10001\",\n    \"key\": \"PROJ-123\",\n    \"fields\": {\n      \"summary\": \"Updated issue\",\n      \"status\": {\n        \"name\": \"In Progress\"\n      }\n    }\n  },\n  \"changelog\": {\n    \"items\": [\n      {\n        \"field\": \"status\",\n        \"fromString\": \"To Do\",\n        \"toString\": \"In Progress\"\n      }\n    ]\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/jira/webhooks",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "webhooks"]
+								},
+								"description": "Public endpoint for Jira webhooks (no auth required)"
+							},
+							"response": []
+						}
+					]
+				}
+			],
+			"description": "Jira integration with OAuth 2.0, connections, issues, and webhooks"
+		},
+		{
+			"name": "Slack Integration",
+			"item": [
+				{
+					"name": "OAuth",
+					"item": [
+						{
+							"name": "Initiate OAuth (Public)",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/slack/oauth/authorize?tenantId={{tenant_id}}&connectionName=My Slack Workspace",
+									"host": ["{{base_url}}"],
+									"path": ["slack", "oauth", "authorize"],
+									"query": [
+										{
+											"key": "tenantId",
+											"value": "{{tenant_id}}",
+											"description": "Required for public access"
+										},
+										{
+											"key": "connectionName",
+											"value": "My Slack Workspace"
+										}
+									]
+								},
+								"description": "Initiate Slack OAuth flow (public endpoint for testing). Opens browser to authorize Slack app."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Connections",
+					"item": [
+						{
+							"name": "List All Connections",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/slack/connections",
+									"host": ["{{base_url}}"],
+									"path": ["slack", "connections"]
+								},
+								"description": "Get all Slack connections for tenant"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Connection by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/slack/connections/{{connection_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["slack", "connections", "{{connection_id}}"]
+								},
+								"description": "Get specific Slack connection details"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Connection",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Slack Workspace\",\n  \"isActive\": true,\n  \"syncSettings\": {\n    \"syncInterval\": 30,\n    \"autoSync\": true,\n    \"syncPublicChannels\": true,\n    \"syncPrivateChannels\": false,\n    \"syncDirectMessages\": false,\n    \"channelFilter\": [\"general\", \"random\"]\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/slack/connections/{{connection_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["slack", "connections", "{{connection_id}}"]
+								},
+								"description": "Update Slack connection settings"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Connection",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/slack/connections/{{connection_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["slack", "connections", "{{connection_id}}"]
+								},
+								"description": "Delete Slack connection"
+							},
+							"response": []
+						},
+						{
+							"name": "Trigger Manual Sync",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/slack/connections/{{connection_id}}/sync",
+									"host": ["{{base_url}}"],
+									"path": ["slack", "connections", "{{connection_id}}", "sync"]
+								},
+								"description": "Manually trigger data sync for Slack workspace"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Messages",
+					"item": [
+						{
+							"name": "List Messages",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/slack/messages?limit=50",
+									"host": ["{{base_url}}"],
+									"path": ["slack", "messages"],
+									"query": [
+										{
+											"key": "channelId",
+											"value": "1",
+											"description": "Filter by channel ID",
+											"disabled": true
+										},
+										{
+											"key": "userId",
+											"value": "1",
+											"description": "Filter by user ID",
+											"disabled": true
+										},
+										{
+											"key": "slackChannelId",
+											"value": "C1234567890",
+											"description": "Filter by Slack channel ID",
+											"disabled": true
+										},
+										{
+											"key": "dateFrom",
+											"value": "2026-01-01T00:00:00Z",
+											"description": "Filter from date",
+											"disabled": true
+										},
+										{
+											"key": "dateTo",
+											"value": "2026-01-31T23:59:59Z",
+											"description": "Filter to date",
+											"disabled": true
+										},
+										{
+											"key": "hasReactions",
+											"value": "true",
+											"description": "Filter messages with reactions",
+											"disabled": true
+										},
+										{
+											"key": "hasThread",
+											"value": "true",
+											"description": "Filter threaded messages",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "50"
+										},
+										{
+											"key": "offset",
+											"value": "0",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get Slack messages with filters"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Message by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/slack/messages/1",
+									"host": ["{{base_url}}"],
+									"path": ["slack", "messages", "1"]
+								},
+								"description": "Get specific Slack message by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Thread Replies",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/slack/messages/thread/1234567890.123456",
+									"host": ["{{base_url}}"],
+									"path": ["slack", "messages", "thread", "1234567890.123456"]
+								},
+								"description": "Get all replies in a Slack thread (by message timestamp)"
+							},
+							"response": []
+						},
+						{
+							"name": "Search Messages",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/slack/messages/search?q=keyword&limit=50",
+									"host": ["{{base_url}}"],
+									"path": ["slack", "messages", "search"],
+									"query": [
+										{
+											"key": "q",
+											"value": "keyword",
+											"description": "Search text"
+										},
+										{
+											"key": "channelId",
+											"value": "1",
+											"description": "Filter by channel",
+											"disabled": true
+										},
+										{
+											"key": "userId",
+											"value": "1",
+											"description": "Filter by user",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "50"
+										}
+									]
+								},
+								"description": "Search messages by text content"
+							},
+							"response": []
+						}
+					]
+				}
+			],
+			"description": "Slack integration with OAuth, messages, channels, and users"
+		},
+		{
+			"name": "Microsoft Teams Integration",
+			"item": [
+				{
+					"name": "OAuth",
+					"item": [
+						{
+							"name": "Initiate OAuth (Public)",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/teams/oauth/authorize?tenantId={{tenant_id}}&connectionName=My Teams Organization",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "oauth", "authorize"],
+									"query": [
+										{
+											"key": "tenantId",
+											"value": "{{tenant_id}}",
+											"description": "Required for public access"
+										},
+										{
+											"key": "connectionName",
+											"value": "My Teams Organization"
+										}
+									]
+								},
+								"description": "Initiate Microsoft Teams OAuth flow. Opens browser to Microsoft login."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Connections",
+					"item": [
+						{
+							"name": "List All Connections",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/teams/connections",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "connections"]
+								},
+								"description": "Get all Teams connections for tenant"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Connection by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/teams/connections/{{connection_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "connections", "{{connection_id}}"]
+								},
+								"description": "Get specific Teams connection details"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Connection",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Teams Organization\",\n  \"isActive\": true,\n  \"syncSettings\": {\n    \"syncInterval\": 30,\n    \"autoSync\": true,\n    \"syncChannels\": true,\n    \"syncMessages\": true,\n    \"syncFiles\": false\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/teams/connections/{{connection_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "connections", "{{connection_id}}"]
+								},
+								"description": "Update Teams connection settings"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Connection",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/teams/connections/{{connection_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "connections", "{{connection_id}}"]
+								},
+								"description": "Delete Teams connection"
+							},
+							"response": []
+						},
+						{
+							"name": "Trigger Manual Sync",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/teams/connections/{{connection_id}}/sync",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "connections", "{{connection_id}}", "sync"]
+								},
+								"description": "Manually trigger data sync for Teams organization"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Sync History",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/teams/connections/{{connection_id}}/sync-history",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "connections", "{{connection_id}}", "sync-history"]
+								},
+								"description": "Get synchronization history for Teams connection"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Messages",
+					"item": [
+						{
+							"name": "List Messages",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/teams/messages?limit=50",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "messages"],
+									"query": [
+										{
+											"key": "channelId",
+											"value": "1",
+											"description": "Filter by channel ID",
+											"disabled": true
+										},
+										{
+											"key": "userId",
+											"value": "1",
+											"description": "Filter by user ID",
+											"disabled": true
+										},
+										{
+											"key": "teamId",
+											"value": "team-guid",
+											"description": "Filter by Teams team ID",
+											"disabled": true
+										},
+										{
+											"key": "dateFrom",
+											"value": "2026-01-01T00:00:00Z",
+											"description": "Filter from date",
+											"disabled": true
+										},
+										{
+											"key": "dateTo",
+											"value": "2026-01-31T23:59:59Z",
+											"description": "Filter to date",
+											"disabled": true
+										},
+										{
+											"key": "messageType",
+											"value": "message",
+											"description": "message | chatMessage | systemEventMessage",
+											"disabled": true
+										},
+										{
+											"key": "hasReactions",
+											"value": "true",
+											"description": "Filter messages with reactions",
+											"disabled": true
+										},
+										{
+											"key": "isDeleted",
+											"value": "false",
+											"description": "Filter deleted messages",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "50"
+										},
+										{
+											"key": "offset",
+											"value": "0",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get Teams messages with filters"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Message by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/teams/messages/1",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "messages", "1"]
+								},
+								"description": "Get specific Teams message by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Thread Replies",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/teams/messages/thread/message-id-123",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "messages", "thread", "message-id-123"]
+								},
+								"description": "Get all replies in a Teams thread"
+							},
+							"response": []
+						},
+						{
+							"name": "Search Messages",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/teams/messages/search?q=keyword&limit=50",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "messages", "search"],
+									"query": [
+										{
+											"key": "q",
+											"value": "keyword",
+											"description": "Search text"
+										},
+										{
+											"key": "channelId",
+											"value": "1",
+											"description": "Filter by channel",
+											"disabled": true
+										},
+										{
+											"key": "teamId",
+											"value": "team-guid",
+											"description": "Filter by team",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "50"
+										}
+									]
+								},
+								"description": "Search Teams messages by text content"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Messages with Reactions",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/teams/messages/reactions?limit=50",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "messages", "reactions"],
+									"query": [
+										{
+											"key": "limit",
+											"value": "50"
+										}
+									]
+								},
+								"description": "Get all Teams messages that have reactions"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Message Statistics",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/teams/messages/stats",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "messages", "stats"],
+									"query": [
+										{
+											"key": "teamId",
+											"value": "team-guid",
+											"description": "Filter by team",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get message statistics (total, deleted, active counts)"
+							},
+							"response": []
+						}
+					]
+				}
+			],
+			"description": "Microsoft Teams integration with OAuth, messages, channels, and users via Microsoft Graph API"
+		}
+	]
+}
