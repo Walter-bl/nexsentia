@@ -412,7 +412,7 @@ export class DashboardController {
       engagement: ['team_engagement'],
     };
 
-    const categoryScores = {};
+    const categoryScores: Record<string, { score: number; trend: 'up' | 'down' | 'stable'; metricsCount: number }> = {};
     let totalScore = 0;
     let categoryCount = 0;
 
@@ -456,8 +456,26 @@ export class DashboardController {
     return 'stable';
   }
 
-  private getTeamSignals(metrics: any[]) {
-    const signals = [];
+  private getTeamSignals(metrics: any[]): Array<{
+    team: string;
+    metrics: Array<{
+      key: string;
+      name: string;
+      value: unknown;
+      status: 'excellent' | 'good' | 'warning' | 'critical';
+    }>;
+    overallScore: number;
+  }> {
+    const signals: Array<{
+      team: string;
+      metrics: Array<{
+        key: string;
+        name: string;
+        value: unknown;
+        status: 'excellent' | 'good' | 'warning' | 'critical';
+      }>;
+      overallScore: number;
+    }> = [];
 
     for (const metric of metrics) {
       if (metric.breakdown?.byTeam) {
@@ -469,7 +487,7 @@ export class DashboardController {
               key: metric.key,
               name: metric.name,
               value: value,
-              status: this.determineStatus(value as number, null),
+              status: this.determineStatus(value as number, undefined),
             });
           } else {
             signals.push({
@@ -478,8 +496,9 @@ export class DashboardController {
                 key: metric.key,
                 name: metric.name,
                 value: value,
-                status: this.determineStatus(value as number, null),
+                status: this.determineStatus(value as number, undefined),
               }],
+              overallScore: 0,
             });
           }
         }
@@ -493,7 +512,7 @@ export class DashboardController {
         return status === 'excellent' ? 100 : status === 'good' ? 75 : status === 'warning' ? 50 : 25;
       });
 
-      signal['overallScore'] = statusScores.length > 0
+      signal.overallScore = statusScores.length > 0
         ? Math.round(statusScores.reduce((a, b) => a + b, 0) / statusScores.length)
         : 0;
     }

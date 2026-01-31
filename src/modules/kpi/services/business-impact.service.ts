@@ -274,12 +274,12 @@ export class BusinessImpactService {
 
       if (incident) {
         return {
-          impactDate: incident.sysCreatedOn,
+          impactDate: incident.sysCreatedOn || new Date(),
           resolvedDate: incident.state === 'Resolved' ? incident.sysUpdatedOn : undefined,
           metadata: {
             priority: incident.priority,
             category: incident.category,
-            assignee: incident.assignedToId,
+            assignee: incident.assignedTo,
           },
         };
       }
@@ -291,11 +291,11 @@ export class BusinessImpactService {
       if (issue) {
         return {
           impactDate: issue.createdAt,
-          resolvedDate: issue.resolutionDate,
+          resolvedDate: issue.resolvedAt,
           metadata: {
             priority: issue.priority,
             issueType: issue.issueType,
-            assignee: issue.assigneeId,
+            assignee: issue.assigneeAccountId,
           },
         };
       }
@@ -383,6 +383,7 @@ export class BusinessImpactService {
     periodStart: Date,
     periodEnd: Date,
   ): Promise<{
+    total: number;
     estimated: number;
     actual: number;
     byType: Record<string, number>;
@@ -401,6 +402,6 @@ export class BusinessImpactService {
       bySeverity[impact.severity] = (bySeverity[impact.severity] || 0) + (impact.estimatedRevenueLoss || 0);
     }
 
-    return { estimated, actual, byType, bySeverity };
+    return { total: estimated, estimated, actual, byType, bySeverity };
   }
 }

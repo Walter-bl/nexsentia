@@ -120,7 +120,7 @@ export class MetricAggregationService {
         return await this.jiraIssueRepository.find({ where });
 
       case 'slack':
-        where.timestamp = Between(periodStart, periodEnd);
+        where.slackCreatedAt = Between(periodStart, periodEnd);
         return await this.slackMessageRepository.find({ where });
 
       case 'teams':
@@ -243,7 +243,7 @@ export class MetricAggregationService {
     const slackMessages = await this.slackMessageRepository.find({
       where: {
         tenantId: context.tenantId,
-        timestamp: Between(context.periodStart, context.periodEnd),
+        slackCreatedAt: Between(context.periodStart, context.periodEnd),
       },
     });
 
@@ -259,14 +259,14 @@ export class MetricAggregationService {
     const totalMessages = slackMessages.length + teamsMessages.length;
 
     for (const msg of slackMessages) {
-      if (msg.userId) {
-        userInteractions.add(msg.userId);
+      if (msg.slackUserId) {
+        userInteractions.add(msg.slackUserId);
       }
     }
 
     for (const msg of teamsMessages) {
-      if (msg.fromUserId) {
-        userInteractions.add(msg.fromUserId);
+      if (msg.teamsUserId) {
+        userInteractions.add(msg.teamsUserId);
       }
     }
 
@@ -293,7 +293,7 @@ export class MetricAggregationService {
     const slackMessages = await this.slackMessageRepository.count({
       where: {
         tenantId: context.tenantId,
-        timestamp: Between(context.periodStart, context.periodEnd),
+        slackCreatedAt: Between(context.periodStart, context.periodEnd),
       },
     });
 

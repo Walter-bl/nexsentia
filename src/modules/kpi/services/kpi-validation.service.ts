@@ -364,15 +364,15 @@ export class KpiValidationService {
    * Log validation issues
    */
   logValidationIssues(report: KpiHealthReport): void {
-    if (report.criticalCount > 0) {
+    if (report.criticalMetrics > 0) {
       this.logger.error(
-        `CRITICAL: ${report.criticalCount} KPIs have critical issues`,
+        `CRITICAL: ${report.criticalMetrics} KPIs have critical issues`,
       );
     }
 
-    if (report.warningCount > 0) {
+    if (report.warningMetrics > 0) {
       this.logger.warn(
-        `WARNING: ${report.warningCount} KPIs have warning-level issues`,
+        `WARNING: ${report.warningMetrics} KPIs have warning-level issues`,
       );
     }
 
