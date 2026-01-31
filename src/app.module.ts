@@ -20,6 +20,8 @@ import { JiraModule } from './modules/jira/jira.module';
 import { SlackModule } from './modules/slack/slack.module';
 import { TeamsModule } from './modules/teams/teams.module';
 import { ServiceNowModule } from './modules/servicenow/servicenow.module';
+import { PrivacyModule } from './modules/privacy/privacy.module';
+import { KpiModule } from './modules/kpi/kpi.module';
 import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.interceptor';
 
 @Module({
@@ -63,6 +65,8 @@ import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.int
     SlackModule,
     TeamsModule,
     ServiceNowModule,
+    PrivacyModule,
+    KpiModule,
   ],
   controllers: [],
   providers: [

@@ -1,0 +1,548 @@
+{
+  "info": {
+    "name": "KPI Dashboard APIs",
+    "description": "Complete collection of KPI and dashboard endpoints for organizational health monitoring",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Organizational Pulse",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/dashboard/organizational-pulse?timeRange=1m",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "dashboard", "organizational-pulse"],
+              "query": [
+                {
+                  "key": "timeRange",
+                  "value": "1m",
+                  "description": "Time range: 7d, 14d, 1m, 3m, 6m, 1y (recommended)"
+                },
+                {
+                  "key": "periodStart",
+                  "value": "2026-01-01",
+                  "description": "Custom start date (overrides timeRange)",
+                  "disabled": true
+                },
+                {
+                  "key": "periodEnd",
+                  "value": "2026-01-31",
+                  "description": "Custom end date",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Comprehensive dashboard endpoint that returns:\n- Overall health score (0-100)\n- Strategic alignment by category\n- Business escalations chart data\n- Team signals breakdown\n- All org health metrics\n\nTime Range Options:\n- 7d: Last 7 days\n- 14d: Last 14 days\n- 1m: Last month (30 days)\n- 3m: Last 3 months (90 days)\n- 6m: Last 6 months (180 days)\n- 1y: Last year (365 days)"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{base_url}}/api/v1/kpi/dashboard/organizational-pulse"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"overallHealth\": {\n    \"score\": 78,\n    \"status\": \"good\",\n    \"totalMetrics\": 11,\n    \"excellentCount\": 3,\n    \"goodCount\": 5,\n    \"warningCount\": 2,\n    \"criticalCount\": 1\n  },\n  \"strategicAlignment\": {\n    \"overall\": 84,\n    \"categories\": {\n      \"incident_management\": {\n        \"score\": 76,\n        \"trend\": \"up\",\n        \"metricsCount\": 3\n      },\n      \"team_productivity\": {\n        \"score\": 82,\n        \"trend\": \"stable\",\n        \"metricsCount\": 3\n      },\n      \"communication\": {\n        \"score\": 90,\n        \"trend\": \"up\",\n        \"metricsCount\": 2\n      },\n      \"quality\": {\n        \"score\": 85,\n        \"trend\": \"stable\",\n        \"metricsCount\": 2\n      },\n      \"engagement\": {\n        \"score\": 88,\n        \"trend\": \"up\",\n        \"metricsCount\": 1\n      }\n    }\n  },\n  \"businessEscalations\": {\n    \"chartData\": [\n      {\n        \"month\": \"2026-01\",\n        \"count\": 12,\n        \"totalLoss\": 45000,\n        \"bySeverity\": {\n          \"critical\": 2,\n          \"high\": 4,\n          \"medium\": 5,\n          \"low\": 1\n        }\n      }\n    ],\n    \"totalCount\": 12,\n    \"totalLoss\": 45000\n  },\n  \"teamSignals\": [\n    {\n      \"team\": \"Communication\",\n      \"overallScore\": 85,\n      \"metrics\": [\n        {\n          \"key\": \"response_time\",\n          \"name\": \"Average Response Time\",\n          \"value\": 120,\n          \"status\": \"good\"\n        }\n      ]\n    },\n    {\n      \"team\": \"Stock\",\n      \"overallScore\": 72,\n      \"metrics\": []\n    }\n  ],\n  \"metrics\": [\n    {\n      \"key\": \"incident_resolution_time\",\n      \"name\": \"Average Incident Resolution Time\",\n      \"value\": 320,\n      \"unit\": \"minutes\",\n      \"trend\": \"down\",\n      \"changePercent\": -12.5,\n      \"status\": \"good\",\n      \"breakdown\": {\n        \"byTeam\": {\n          \"Communication\": 280,\n          \"Stock\": 360\n        }\n      }\n    }\n  ],\n  \"period\": {\n    \"start\": \"2026-01-01T00:00:00.000Z\",\n    \"end\": \"2026-01-31T23:59:59.999Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Org Health Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/dashboard/org-health?timeRange=1m",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "dashboard", "org-health"],
+              "query": [
+                {
+                  "key": "timeRange",
+                  "value": "1m",
+                  "description": "Time range: 7d, 14d, 1m, 3m, 6m, 1y"
+                },
+                {
+                  "key": "periodStart",
+                  "value": "2026-01-01",
+                  "disabled": true
+                },
+                {
+                  "key": "periodEnd",
+                  "value": "2026-01-31",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Returns organizational health metrics with chart data for each metric"
+          }
+        },
+        {
+          "name": "Get Business Impact Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/dashboard/business-impact?timeRange=1m",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "dashboard", "business-impact"],
+              "query": [
+                {
+                  "key": "timeRange",
+                  "value": "1m",
+                  "description": "Time range: 7d, 14d, 1m, 3m, 6m, 1y"
+                },
+                {
+                  "key": "periodStart",
+                  "value": "2026-01-01",
+                  "disabled": true
+                },
+                {
+                  "key": "periodEnd",
+                  "value": "2026-01-31",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Returns business impact data including total revenue loss and impacts breakdown"
+          }
+        },
+        {
+          "name": "Get Health Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/dashboard/health-report",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "dashboard", "health-report"]
+            },
+            "description": "Validates metrics and returns health report with issues and recommendations"
+          }
+        },
+        {
+          "name": "Create Dashboard Snapshot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/dashboard/snapshot",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "dashboard", "snapshot"]
+            },
+            "description": "Creates a point-in-time snapshot of all KPIs for historical tracking"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Metrics",
+      "item": [
+        {
+          "name": "Get All Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/metrics?category=org_health&active=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "metrics"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "org_health",
+                  "description": "Filter by category (org_health, business_impact)"
+                },
+                {
+                  "key": "active",
+                  "value": "true",
+                  "description": "Filter by active status"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Metric by Key",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/metrics/incident_resolution_time",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "metrics", "incident_resolution_time"]
+            }
+          }
+        },
+        {
+          "name": "Create Custom Metric",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"metricKey\": \"custom_metric_key\",\n  \"name\": \"Custom Metric Name\",\n  \"description\": \"Description of what this metric measures\",\n  \"category\": \"org_health\",\n  \"dataType\": \"number\",\n  \"aggregationType\": \"avg\",\n  \"calculation\": {\n    \"formula\": \"AVG(field)\",\n    \"sourceFields\": [\"field1\", \"field2\"],\n    \"sourceTypes\": [\"jira\"],\n    \"filters\": {}\n  },\n  \"thresholds\": {\n    \"excellent\": { \"min\": 90 },\n    \"good\": { \"min\": 70 },\n    \"warning\": { \"min\": 50 },\n    \"critical\": { \"max\": 50 }\n  },\n  \"displayConfig\": {\n    \"unit\": \"count\",\n    \"format\": \"number\",\n    \"chartType\": \"line\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "metrics"]
+            }
+          }
+        },
+        {
+          "name": "Update Metric",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Metric Name\",\n  \"isActive\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/metrics/custom_metric_key",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "metrics", "custom_metric_key"]
+            }
+          }
+        },
+        {
+          "name": "Delete Metric",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/metrics/custom_metric_key",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "metrics", "custom_metric_key"]
+            }
+          }
+        },
+        {
+          "name": "Calculate Metric",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"periodStart\": \"2026-01-01T00:00:00.000Z\",\n  \"periodEnd\": \"2026-01-31T23:59:59.999Z\",\n  \"granularity\": \"daily\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/metrics/incident_resolution_time/calculate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "metrics", "incident_resolution_time", "calculate"]
+            }
+          }
+        },
+        {
+          "name": "Get Metric Values",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/metrics/incident_resolution_time/values?periodStart=2026-01-01&periodEnd=2026-01-31&granularity=daily",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "metrics", "incident_resolution_time", "values"],
+              "query": [
+                {
+                  "key": "periodStart",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "periodEnd",
+                  "value": "2026-01-31"
+                },
+                {
+                  "key": "granularity",
+                  "value": "daily"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Business Impact",
+      "item": [
+        {
+          "name": "Create Business Impact",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceType\": \"servicenow\",\n  \"sourceId\": \"INC0012345\",\n  \"impactType\": \"service_outage\",\n  \"customersAffected\": 150,\n  \"durationMinutes\": 240,\n  \"severity\": \"high\",\n  \"revenueMapping\": {\n    \"affectedServices\": [\"payment-service\", \"checkout-service\"],\n    \"revenuePerHour\": 5000,\n    \"recurringRevenueImpact\": 2000\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/business-impact",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "business-impact"]
+            }
+          }
+        },
+        {
+          "name": "Estimate Loss",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"includeOpportunityCost\": true,\n  \"includeReputationImpact\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/business-impact/1/estimate-loss",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "business-impact", "1", "estimate-loss"]
+            }
+          }
+        },
+        {
+          "name": "Validate Impact",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isValid\": true,\n  \"notes\": \"Validation notes from finance team\",\n  \"actualRevenueLoss\": 18500\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/business-impact/1/validate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "business-impact", "1", "validate"]
+            }
+          }
+        },
+        {
+          "name": "Get Business Impacts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/business-impact?periodStart=2026-01-01&periodEnd=2026-01-31&severity=high&sourceType=servicenow&validated=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "business-impact"],
+              "query": [
+                {
+                  "key": "periodStart",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "periodEnd",
+                  "value": "2026-01-31"
+                },
+                {
+                  "key": "severity",
+                  "value": "high"
+                },
+                {
+                  "key": "sourceType",
+                  "value": "servicenow"
+                },
+                {
+                  "key": "validated",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Total Revenue Loss",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/business-impact/total-loss?periodStart=2026-01-01&periodEnd=2026-01-31",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "business-impact", "total-loss"],
+              "query": [
+                {
+                  "key": "periodStart",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "periodEnd",
+                  "value": "2026-01-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Validate Impact Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/kpi/business-impact/1/validate-data",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "kpi", "business-impact", "1", "validate-data"]
+            },
+            "description": "Validates the data quality of a business impact record"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
