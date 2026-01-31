@@ -308,11 +308,19 @@ describe('TeamsIngestionService', () => {
           reactions: expect.arrayContaining([
             expect.objectContaining({
               reactionType: 'like',
+              user: expect.objectContaining({
+                id: 'user-2',
+              }),
             }),
           ]),
           mentions: expect.arrayContaining([
             expect.objectContaining({
-              userId: 'user-3',
+              id: 0,
+              mentioned: expect.objectContaining({
+                user: expect.objectContaining({
+                  id: 'user-3',
+                }),
+              }),
             }),
           ]),
         }),
@@ -330,7 +338,7 @@ describe('TeamsIngestionService', () => {
       expect(mockSyncHistoryRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'failed',
-          errorMessage: 'Graph API error',
+          error: 'Graph API error',
         }),
       );
     });

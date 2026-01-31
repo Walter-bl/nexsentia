@@ -29,9 +29,11 @@ describe('JiraIngestionService', () => {
     findOne: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
+    count: jest.fn(() => Promise.resolve(1)),
   };
 
   const mockProjectRepository = {
+    find: jest.fn(),
     findOne: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
@@ -46,11 +48,15 @@ describe('JiraIngestionService', () => {
   const mockApiClient = {
     getProjects: jest.fn(),
     searchIssues: jest.fn(),
+    getProjectIssues: jest.fn(),
+    getIssuesUpdatedSince: jest.fn(),
     getUsers: jest.fn(),
+    testConnection: jest.fn(() => Promise.resolve(true)),
   };
 
   const mockOAuthService = {
     ensureValidToken: jest.fn(),
+    refreshTokenIfNeeded: jest.fn((connection) => Promise.resolve(connection)),
   };
 
   const mockConfigService = {
@@ -128,6 +134,10 @@ describe('JiraIngestionService', () => {
       cloudId: 'test-cloud-id',
       siteUrl: 'https://test.atlassian.net',
       accessToken: 'test-token',
+      oauthMetadata: {
+        cloudId: 'test-cloud-id',
+        siteUrl: 'https://test.atlassian.net',
+      },
       syncSettings: {
         syncInterval: 30,
       },
@@ -148,18 +158,17 @@ describe('JiraIngestionService', () => {
       mockSyncHistoryRepository.create.mockReturnValue(mockSyncHistory);
       mockSyncHistoryRepository.save.mockResolvedValue(mockSyncHistory);
       mockOAuthService.ensureValidToken.mockResolvedValue('valid-token');
+      mockProjectRepository.find.mockResolvedValue([]);
     });
 
     it('should successfully sync a connection', async () => {
-      const mockProjects = {
-        values: [
-          {
-            id: 'proj-1',
-            key: 'TEST',
-            name: 'Test Project',
-          },
-        ],
-      };
+      const mockProjects = [
+        {
+          id: 'proj-1',
+          key: 'TEST',
+          name: 'Test Project',
+        },
+      ];
 
       const mockIssues = {
         issues: [
@@ -178,9 +187,11 @@ describe('JiraIngestionService', () => {
 
       mockApiClient.getProjects.mockResolvedValue(mockProjects);
       mockApiClient.searchIssues.mockResolvedValue(mockIssues);
+      mockApiClient.getProjectIssues.mockResolvedValue(mockIssues);
       mockProjectRepository.findOne.mockResolvedValue(null);
-      mockProjectRepository.create.mockReturnValue({ id: 1 });
-      mockProjectRepository.save.mockResolvedValue({ id: 1 });
+      mockProjectRepository.create.mockReturnValue({ id: 1, jiraProjectKey: 'TEST' });
+      mockProjectRepository.save.mockResolvedValue({ id: 1, jiraProjectKey: 'TEST' });
+      mockProjectRepository.find.mockResolvedValue([{ id: 1, jiraProjectKey: 'TEST', connectionId: 1, tenantId: 1 }]);
       mockIssueRepository.findOne.mockResolvedValue(null);
       mockIssueRepository.create.mockReturnValue({ id: 1 });
       mockIssueRepository.save.mockResolvedValue({ id: 1 });
@@ -190,11 +201,11 @@ describe('JiraIngestionService', () => {
 
       expect(result).toBeDefined();
       expect(result.status).toBe('completed');
-      expect(mockOAuthService.ensureValidToken).toHaveBeenCalledWith(
+      expect(mockOAuthService.refreshTokenIfNeeded).toHaveBeenCalledWith(
         mockConnection,
       );
       expect(mockApiClient.getProjects).toHaveBeenCalled();
-      expect(mockApiClient.searchIssues).toHaveBeenCalled();
+      expect(mockApiClient.getProjectIssues).toHaveBeenCalled();
       expect(mockConnectionRepository.save).toHaveBeenCalled();
     });
 
@@ -217,7 +228,7 @@ describe('JiraIngestionService', () => {
     it('should throw error if connection not found', async () => {
       mockConnectionRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.syncConnection(999, 1, 'full')).rejects.toThrow(
+      await expect(service.syncConnection(1, 999, 'full')).rejects.toThrow(
         'Connection 999 not found',
       );
     });
@@ -241,20 +252,30 @@ describe('JiraIngestionService', () => {
         lastSuccessfulSyncAt: new Date('2024-01-01'),
       };
 
+      const mockProject = { id: 1, jiraProjectKey: 'TEST', connectionId: 1, tenantId: 1 };
+
       mockConnectionRepository.findOne.mockResolvedValue(
         connectionWithLastSync,
       );
-      mockApiClient.getProjects.mockResolvedValue({ values: [] });
+      mockApiClient.getProjects.mockResolvedValue([{ id: 'proj-1', key: 'TEST', name: 'Test' }]);
       mockApiClient.searchIssues.mockResolvedValue({ issues: [], total: 0 });
+      mockApiClient.getProjectIssues.mockResolvedValue({ issues: [], total: 0 });
+      mockApiClient.getIssuesUpdatedSince.mockResolvedValue({ issues: [], total: 0 });
+      mockProjectRepository.findOne.mockResolvedValue(null);
+      mockProjectRepository.create.mockReturnValue(mockProject);
+      mockProjectRepository.save.mockResolvedValue(mockProject);
+      mockProjectRepository.find.mockResolvedValue([mockProject]);
 
       await service.syncConnection(1, 1, 'incremental');
 
-      expect(mockApiClient.searchIssues).toHaveBeenCalledWith(
+      expect(mockApiClient.getIssuesUpdatedSince).toHaveBeenCalledWith(
         expect.objectContaining({
           cloudId: 'test-cloud-id',
         }),
-        expect.stringContaining('updated'),
-        expect.any(Object),
+        expect.any(Date), // lastSuccessfulSyncAt
+        expect.arrayContaining(['TEST']), // project keys array
+        expect.any(Number), // startAt
+        expect.any(Number), // maxResults
       );
     });
   });
