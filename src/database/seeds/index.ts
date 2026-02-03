@@ -2,6 +2,10 @@ import 'reflect-metadata';
 import { config } from 'dotenv';
 import dataSource from '../../config/database/typeorm.config';
 import { seedRolesAndPermissions } from './roles-permissions.seeder';
+import { seedJiraData } from './jira.seeder';
+import { seedSlackData } from './slack.seeder';
+import { seedTeamsData } from './teams.seeder';
+import { seedServiceNowData } from './servicenow.seeder';
 
 // Load environment variables
 config();
@@ -18,6 +22,15 @@ async function runSeeders() {
 
     // Run seeders in order
     await seedRolesAndPermissions(dataSource);
+
+    // Seed integration demo data for tenant 1
+    const demoTenantId = 1;
+    console.log(`\n📦 Seeding integration demo data for tenant ${demoTenantId}...\n`);
+
+    await seedJiraData(dataSource, demoTenantId);
+    await seedSlackData(dataSource, demoTenantId);
+    await seedTeamsData(dataSource, demoTenantId);
+    await seedServiceNowData(dataSource, demoTenantId);
 
     console.log('\n========================================');
     console.log('Database seeding completed successfully!');
