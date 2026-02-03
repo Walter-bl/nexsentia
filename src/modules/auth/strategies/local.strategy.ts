@@ -9,13 +9,11 @@ export class LocalStrategy extends PassportStrategy(Strategy, 'local') {
     super({
       usernameField: 'email',
       passwordField: 'password',
-      passReqToCallback: true,
     });
   }
 
-  async validate(req: any, email: string, password: string): Promise<any> {
-    const tenantId = req.body.tenantId;
-    const user = await this.authService.validateUser(email, password, tenantId);
+  async validate(email: string, password: string): Promise<any> {
+    const user = await this.authService.validateUser(email, password);
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');

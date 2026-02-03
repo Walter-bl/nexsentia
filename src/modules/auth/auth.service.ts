@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
@@ -28,32 +28,27 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
-    let tenantId = registerDto.tenantId;
-
-    // If no tenant ID provided, create a new tenant
-    if (!tenantId) {
-      const tenantSlug = this.generateSlug(registerDto.email);
-      const tenant = await this.tenantsService.create({
-        name: `${registerDto.firstName} ${registerDto.lastName}'s Organization`,
-        slug: tenantSlug,
-        contactEmail: registerDto.email,
-        isActive: true,
-      });
-      tenantId = tenant.id;
-    } else {
-      // Verify tenant exists and is active
-      const tenant = await this.tenantsService.findOne(tenantId);
-      if (!tenant.isActive) {
-        throw new BadRequestException('Tenant is not active');
-      }
+    // Check if user with this email already exists
+    const existingUser = await this.usersService.findByEmail(registerDto.email);
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
     }
 
-    // Determine role based on tenant
-    const roleCode = !registerDto.tenantId ? UserRole.SUPER_ADMIN : UserRole.ANALYST;
-    const role = await this.rolesService.findByCode(roleCode);
+    // Always create a new tenant for each registration (analyst-focused platform)
+    const tenantSlug = this.generateSlug(registerDto.email);
+    const tenant = await this.tenantsService.create({
+      name: `${registerDto.firstName} ${registerDto.lastName}'s Organization`,
+      slug: tenantSlug,
+      contactEmail: registerDto.email,
+      isActive: true,
+    });
+    const tenantId = tenant.id;
+
+    // Assign ANALYST role (default role for the platform)
+    const role = await this.rolesService.findByCode(UserRole.ANALYST);
 
     if (!role) {
-      throw new BadRequestException(`Role ${roleCode} not found`);
+      throw new BadRequestException(`Role ${UserRole.ANALYST} not found`);
     }
 
     // Create user
@@ -77,7 +72,7 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto, ipAddress?: string): Promise<AuthResponseDto> {
-    const user = await this.validateUser(loginDto.email, loginDto.password, loginDto.tenantId);
+    const user = await this.validateUser(loginDto.email, loginDto.password);
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -95,8 +90,8 @@ export class AuthService {
     };
   }
 
-  async validateUser(email: string, password: string, tenantId?: number): Promise<User | null> {
-    const user = await this.usersService.findByEmail(email, tenantId);
+  async validateUser(email: string, password: string): Promise<User | null> {
+    const user = await this.usersService.findByEmail(email);
 
     if (!user) {
       return null;
@@ -211,7 +206,8 @@ export class AuthService {
   private generateSlug(email: string): string {
     const username = email.split('@')[0];
     const timestamp = Date.now().toString(36);
-    return `${username}-${timestamp}`.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const randomSuffix = Math.random().toString(36).substring(2, 8);
+    return `${username}-${timestamp}-${randomSuffix}`.toLowerCase().replace(/[^a-z0-9-]/g, '-');
   }
 
   private generateTokenId(): string {

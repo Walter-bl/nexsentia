@@ -58,30 +58,14 @@ describe('TenantsService', () => {
     };
 
     it('should create a new tenant', async () => {
-      repository.findOne.mockResolvedValue(null);
       repository.create.mockReturnValue(mockTenant as any);
       repository.save.mockResolvedValue(mockTenant as any);
 
       const result = await service.create(createTenantData as any);
 
-      expect(repository.findOne).toHaveBeenCalledWith({
-        where: [{ name: createTenantData.name }, { slug: createTenantData.slug }],
-      });
       expect(repository.create).toHaveBeenCalledWith(createTenantData);
       expect(repository.save).toHaveBeenCalled();
       expect(result).toEqual(mockTenant);
-    });
-
-    it('should throw ConflictException if tenant with same name exists', async () => {
-      repository.findOne.mockResolvedValue(mockTenant as any);
-
-      await expect(service.create(createTenantData as any)).rejects.toThrow('Tenant with this name or slug already exists');
-    });
-
-    it('should throw ConflictException if tenant with same slug exists', async () => {
-      repository.findOne.mockResolvedValue(mockTenant as any);
-
-      await expect(service.create(createTenantData as any)).rejects.toThrow('Tenant with this name or slug already exists');
     });
   });
 

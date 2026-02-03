@@ -145,18 +145,18 @@ describe('AuthService', () => {
       password: 'Password123!',
     };
 
-    it('should register a new user with a new tenant (super admin)', async () => {
+    it('should register a new user and automatically create a new tenant with analyst role', async () => {
       tenantsService.create.mockResolvedValue(mockTenant as any);
       rolesService.findByCode.mockResolvedValue(mockRole as any);
       usersService.create.mockResolvedValue(mockUser as any);
-      rolesService.getPermissionCodesForRoles.mockResolvedValue(['read:reports', 'write:reports']);
+      rolesService.getPermissionCodesForRoles.mockResolvedValue(['read:reports']);
       jwtService.signAsync.mockResolvedValueOnce('access-token').mockResolvedValueOnce('refresh-token');
       jwtService.decode.mockReturnValue({ iat: 1000, exp: 2000 });
 
       const result = await service.register(registerDto);
 
       expect(tenantsService.create).toHaveBeenCalled();
-      expect(rolesService.findByCode).toHaveBeenCalledWith(UserRole.SUPER_ADMIN);
+      expect(rolesService.findByCode).toHaveBeenCalledWith(UserRole.ANALYST);
       expect(usersService.create).toHaveBeenCalled();
       expect(result).toHaveProperty('user');
       expect(result).toHaveProperty('tokens');
@@ -164,44 +164,12 @@ describe('AuthService', () => {
       expect(result.tokens).toHaveProperty('refreshToken');
     });
 
-    it('should register a new user with existing tenant (analyst)', async () => {
-      const dtoWithTenant = { ...registerDto, tenantId: 1 };
-      tenantsService.findOne.mockResolvedValue(mockTenant as any);
-      rolesService.findByCode.mockResolvedValue(mockRole as any);
-      usersService.create.mockResolvedValue(mockUser as any);
-      rolesService.getPermissionCodesForRoles.mockResolvedValue(['read:reports']);
-      jwtService.signAsync.mockResolvedValueOnce('access-token').mockResolvedValueOnce('refresh-token');
-      jwtService.decode.mockReturnValue({ iat: 1000, exp: 2000 });
-
-      const result = await service.register(dtoWithTenant);
-
-      expect(tenantsService.findOne).toHaveBeenCalledWith(1);
-      expect(rolesService.findByCode).toHaveBeenCalledWith(UserRole.ANALYST);
-      expect(usersService.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          email: dtoWithTenant.email,
-          tenantId: 1,
-        }),
-        [mockRole.id],
-      );
-      expect(result).toHaveProperty('user');
-      expect(result).toHaveProperty('tokens');
-    });
-
-    it('should throw BadRequestException if tenant is not active', async () => {
-      const dtoWithTenant = { ...registerDto, tenantId: 1 };
-      tenantsService.findOne.mockResolvedValue({ ...mockTenant, isActive: false } as any);
-
-      await expect(service.register(dtoWithTenant)).rejects.toThrow(BadRequestException);
-      await expect(service.register(dtoWithTenant)).rejects.toThrow('Tenant is not active');
-    });
-
     it('should throw BadRequestException if role not found', async () => {
       tenantsService.create.mockResolvedValue(mockTenant as any);
       rolesService.findByCode.mockResolvedValue(null);
 
       await expect(service.register(registerDto)).rejects.toThrow(BadRequestException);
-      await expect(service.register(registerDto)).rejects.toThrow('Role super_admin not found');
+      await expect(service.register(registerDto)).rejects.toThrow('Role analyst not found');
     });
   });
 
@@ -209,7 +177,6 @@ describe('AuthService', () => {
     const loginDto = {
       email: 'test@example.com',
       password: 'Password123!',
-      tenantId: 1,
     };
 
     it('should successfully log in a user', async () => {
@@ -223,7 +190,7 @@ describe('AuthService', () => {
 
       const result = await service.login(loginDto, '127.0.0.1');
 
-      expect(usersService.findByEmail).toHaveBeenCalledWith(loginDto.email, loginDto.tenantId);
+      expect(usersService.findByEmail).toHaveBeenCalledWith(loginDto.email);
       expect(usersService.validatePassword).toHaveBeenCalledWith(mockUser, loginDto.password);
       expect(usersService.updateLastLogin).toHaveBeenCalledWith(mockUser.id, '127.0.0.1');
       expect(result).toHaveProperty('user');
@@ -313,7 +280,7 @@ describe('AuthService', () => {
       usersService.validatePassword.mockResolvedValue(true);
       tenantsService.findOne.mockResolvedValue(mockTenant as any);
 
-      const result = await service.validateUser('test@example.com', 'Password123!', 1);
+      const result = await service.validateUser('test@example.com', 'Password123!');
 
       expect(result).toEqual(mockUser);
     });
@@ -321,7 +288,7 @@ describe('AuthService', () => {
     it('should return null for user not found', async () => {
       usersService.findByEmail.mockResolvedValue(null);
 
-      const result = await service.validateUser('notfound@example.com', 'Password123!', 1);
+      const result = await service.validateUser('notfound@example.com', 'Password123!');
 
       expect(result).toBeNull();
     });
@@ -329,7 +296,7 @@ describe('AuthService', () => {
     it('should throw UnauthorizedException for inactive user', async () => {
       usersService.findByEmail.mockResolvedValue({ ...mockUser, isActive: false } as any);
 
-      await expect(service.validateUser('test@example.com', 'Password123!', 1)).rejects.toThrow(
+      await expect(service.validateUser('test@example.com', 'Password123!')).rejects.toThrow(
         UnauthorizedException,
       );
     });
@@ -338,7 +305,7 @@ describe('AuthService', () => {
       usersService.findByEmail.mockResolvedValue(mockUser as any);
       usersService.validatePassword.mockResolvedValue(false);
 
-      const result = await service.validateUser('test@example.com', 'WrongPassword', 1);
+      const result = await service.validateUser('test@example.com', 'WrongPassword');
 
       expect(result).toBeNull();
     });

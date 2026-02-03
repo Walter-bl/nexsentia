@@ -1,0 +1,1709 @@
+{
+	"info": {
+		"_postman_id": "nexsentia-complete-api-v2",
+		"name": "NexSentia - Complete API Collection",
+		"description": "Complete API collection for NexSentia Platform - Organizational & Business Weak-Signal Detection\n\nIncludes: Authentication, Users, Tenants, Audit, Jira, Slack, Teams, ServiceNow, Privacy, and KPI Dashboard",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "nexsentia-v2"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "tenant_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "connection_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "metric_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "impact_id",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Root Health Check",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "3000",
+							"path": [""]
+						}
+					}
+				},
+				{
+					"name": "Health Endpoint",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "3000",
+							"path": ["health"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', response.tokens.accessToken);",
+									"    pm.collectionVariables.set('refresh_token', response.tokens.refreshToken);",
+									"    pm.collectionVariables.set('user_id', response.user.id);",
+									"    pm.collectionVariables.set('tenant_id', response.user.tenantId);",
+									"    console.log('Registration successful!');",
+									"    console.log('Tenant ID:', response.user.tenantId);",
+									"    console.log('User Role:', response.user.roles ? response.user.roles[0] : 'ANALYST');",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"password\": \"SecureP@ssw0rd123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "register"]
+						},
+						"description": "Register as a new analyst. Automatically creates a new organization (tenant) and assigns ANALYST role. Each analyst gets their own isolated workspace for monitoring organizational health."
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', response.tokens.accessToken);",
+									"    pm.collectionVariables.set('refresh_token', response.tokens.refreshToken);",
+									"    pm.collectionVariables.set('user_id', response.user.id);",
+									"    pm.collectionVariables.set('tenant_id', response.user.tenantId);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecureP@ssw0rd123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "Login with email and password. System automatically identifies the user's organization."
+					}
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/refresh",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "refresh"]
+						}
+					}
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "me"]
+						}
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "logout"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "List All Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": ["{{base_url}}"],
+							"path": ["users"]
+						}
+					}
+				},
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"jane.smith@example.com\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"password\": \"SecureP@ssw0rd123\",\n  \"roleIds\": [2],\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": ["{{base_url}}"],
+							"path": ["users"]
+						}
+					}
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith-Updated\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Tenants",
+			"item": [
+				{
+					"name": "List All Tenants",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenants",
+							"host": ["{{base_url}}"],
+							"path": ["tenants"]
+						}
+					}
+				},
+				{
+					"name": "Create Tenant",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Acme Corporation\",\n  \"slug\": \"acme-corp\",\n  \"contactEmail\": \"contact@acmecorp.com\",\n  \"isActive\": true,\n  \"subscriptionTier\": \"professional\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tenants",
+							"host": ["{{base_url}}"],
+							"path": ["tenants"]
+						}
+					}
+				},
+				{
+					"name": "Get Tenant by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tenants/{{tenant_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["tenants", "{{tenant_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Tenant",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Acme Corporation Updated\",\n  \"subscriptionTier\": \"enterprise\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tenants/{{tenant_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["tenants", "{{tenant_id}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Audit Logs",
+			"item": [
+				{
+					"name": "Query Audit Logs",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/audit?page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["audit"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "action",
+									"value": "CREATE",
+									"disabled": true
+								},
+								{
+									"key": "userId",
+									"value": "1",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Export Audit Logs",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/audit/export?fromDate=2026-01-01&toDate=2026-01-31",
+							"host": ["{{base_url}}"],
+							"path": ["audit", "export"],
+							"query": [
+								{
+									"key": "fromDate",
+									"value": "2026-01-01"
+								},
+								{
+									"key": "toDate",
+									"value": "2026-01-31"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Jira Integration",
+			"item": [
+				{
+					"name": "OAuth",
+					"item": [
+						{
+							"name": "Initiate OAuth",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/oauth/authorize?connectionName=Main Jira",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "oauth", "authorize"],
+									"query": [
+										{
+											"key": "connectionName",
+											"value": "Main Jira"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Complete OAuth",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"code\": \"oauth-code-from-callback\",\n  \"connectionName\": \"Main Jira\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/jira/oauth/complete",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "oauth", "complete"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Connections",
+					"item": [
+						{
+							"name": "List Connections",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/connections",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "connections"]
+								}
+							}
+						},
+						{
+							"name": "Get Connection by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/connections/{{connection_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "connections", "{{connection_id}}"]
+								}
+							}
+						},
+						{
+							"name": "Trigger Sync",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"syncType\": \"full\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/jira/connections/{{connection_id}}/sync",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "connections", "{{connection_id}}", "sync"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Issues",
+					"item": [
+						{
+							"name": "List Issues",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/issues?page=1&limit=20",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "issues"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20"
+										},
+										{
+											"key": "status",
+											"value": "In Progress",
+											"disabled": true
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Issue by Key",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/jira/issues/key/PROJ-123",
+									"host": ["{{base_url}}"],
+									"path": ["jira", "issues", "key", "PROJ-123"]
+								}
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Slack Integration",
+			"item": [
+				{
+					"name": "Connections",
+					"item": [
+						{
+							"name": "List Connections",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/slack/connections",
+									"host": ["{{base_url}}"],
+									"path": ["slack", "connections"]
+								}
+							}
+						},
+						{
+							"name": "Trigger Sync",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/slack/connections/{{connection_id}}/sync",
+									"host": ["{{base_url}}"],
+									"path": ["slack", "connections", "{{connection_id}}", "sync"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Messages",
+					"item": [
+						{
+							"name": "List Messages",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/slack/messages?limit=50",
+									"host": ["{{base_url}}"],
+									"path": ["slack", "messages"],
+									"query": [
+										{
+											"key": "limit",
+											"value": "50"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Search Messages",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/slack/messages/search?q=keyword",
+									"host": ["{{base_url}}"],
+									"path": ["slack", "messages", "search"],
+									"query": [
+										{
+											"key": "q",
+											"value": "keyword"
+										}
+									]
+								}
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Teams Integration",
+			"item": [
+				{
+					"name": "Connections",
+					"item": [
+						{
+							"name": "List Connections",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/teams/connections",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "connections"]
+								}
+							}
+						},
+						{
+							"name": "Trigger Sync",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/teams/connections/{{connection_id}}/sync",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "connections", "{{connection_id}}", "sync"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Messages",
+					"item": [
+						{
+							"name": "List Messages",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/teams/messages?limit=50",
+									"host": ["{{base_url}}"],
+									"path": ["teams", "messages"],
+									"query": [
+										{
+											"key": "limit",
+											"value": "50"
+										}
+									]
+								}
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "ServiceNow Integration",
+			"item": [
+				{
+					"name": "OAuth",
+					"item": [
+						{
+							"name": "Initiate OAuth",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/servicenow/oauth/authorize?connectionName=Main ServiceNow&instanceUrl=https://dev12345.service-now.com",
+									"host": ["{{base_url}}"],
+									"path": ["servicenow", "oauth", "authorize"],
+									"query": [
+										{
+											"key": "connectionName",
+											"value": "Main ServiceNow"
+										},
+										{
+											"key": "instanceUrl",
+											"value": "https://dev12345.service-now.com"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Complete OAuth",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"code\": \"oauth-code-from-callback\",\n  \"connectionName\": \"Main ServiceNow\",\n  \"instanceUrl\": \"https://dev12345.service-now.com\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/servicenow/oauth/complete",
+									"host": ["{{base_url}}"],
+									"path": ["servicenow", "oauth", "complete"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Connections",
+					"item": [
+						{
+							"name": "List Connections",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/servicenow/connections",
+									"host": ["{{base_url}}"],
+									"path": ["servicenow", "connections"]
+								}
+							}
+						},
+						{
+							"name": "Get Connection by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/servicenow/connections/{{connection_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["servicenow", "connections", "{{connection_id}}"]
+								}
+							}
+						},
+						{
+							"name": "Update Connection",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated ServiceNow\",\n  \"isActive\": true,\n  \"syncSettings\": {\n    \"syncInterval\": 30,\n    \"autoSync\": true,\n    \"priorityFilter\": [\"1\", \"2\"],\n    \"stateFilter\": [\"New\", \"In Progress\"]\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/servicenow/connections/{{connection_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["servicenow", "connections", "{{connection_id}}"]
+								}
+							}
+						},
+						{
+							"name": "Trigger Sync",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"syncType\": \"full\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/servicenow/connections/{{connection_id}}/sync",
+									"host": ["{{base_url}}"],
+									"path": ["servicenow", "connections", "{{connection_id}}", "sync"]
+								}
+							}
+						},
+						{
+							"name": "Get Sync History",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/servicenow/connections/{{connection_id}}/sync-history",
+									"host": ["{{base_url}}"],
+									"path": ["servicenow", "connections", "{{connection_id}}", "sync-history"]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Incidents",
+					"item": [
+						{
+							"name": "List Incidents",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/servicenow/incidents?page=1&limit=20",
+									"host": ["{{base_url}}"],
+									"path": ["servicenow", "incidents"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20"
+										},
+										{
+											"key": "state",
+											"value": "In Progress",
+											"disabled": true
+										},
+										{
+											"key": "priority",
+											"value": "1",
+											"disabled": true
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Incident by Number",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/servicenow/incidents/number/INC0001234",
+									"host": ["{{base_url}}"],
+									"path": ["servicenow", "incidents", "number", "INC0001234"]
+								}
+							}
+						},
+						{
+							"name": "Get Incident by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/servicenow/incidents/1",
+									"host": ["{{base_url}}"],
+									"path": ["servicenow", "incidents", "1"]
+								}
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Privacy & PII",
+			"item": [
+				{
+					"name": "Anonymize PII",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"data\": {\n    \"email\": \"john.doe@example.com\",\n    \"phone\": \"+1-555-123-4567\",\n    \"ssn\": \"123-45-6789\",\n    \"creditCard\": \"4532-1234-5678-9010\",\n    \"name\": \"John Doe\",\n    \"address\": \"123 Main St, Anytown, ST 12345\",\n    \"message\": \"Contact me at john.doe@example.com or call +1-555-123-4567\"\n  },\n  \"fields\": [\"email\", \"phone\", \"ssn\", \"creditCard\", \"name\", \"address\", \"message\"],\n  \"method\": \"hash\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/privacy/anonymize",
+							"host": ["{{base_url}}"],
+							"path": ["privacy", "anonymize"]
+						},
+						"description": "Anonymize PII data using hash, mask, or tokenize methods"
+					}
+				},
+				{
+					"name": "Detect PII",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"text\": \"Contact John Doe at john.doe@example.com or call him at +1-555-123-4567. His SSN is 123-45-6789 and credit card is 4532-1234-5678-9010.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/privacy/detect",
+							"host": ["{{base_url}}"],
+							"path": ["privacy", "detect"]
+						},
+						"description": "Detect PII in text and return locations and types"
+					}
+				},
+				{
+					"name": "Redact PII",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"text\": \"Contact John Doe at john.doe@example.com or call him at +1-555-123-4567.\",\n  \"piiTypes\": [\"email\", \"phone\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/privacy/redact",
+							"host": ["{{base_url}}"],
+							"path": ["privacy", "redact"]
+						},
+						"description": "Redact specific PII types from text"
+					}
+				},
+				{
+					"name": "Encrypt PII",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"data\": \"sensitive data to encrypt\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/privacy/encrypt",
+							"host": ["{{base_url}}"],
+							"path": ["privacy", "encrypt"]
+						},
+						"description": "Encrypt sensitive data"
+					}
+				},
+				{
+					"name": "Decrypt PII",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"encryptedData\": \"encrypted-string-here\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/privacy/decrypt",
+							"host": ["{{base_url}}"],
+							"path": ["privacy", "decrypt"]
+						},
+						"description": "Decrypt previously encrypted data"
+					}
+				}
+			]
+		},
+		{
+			"name": "KPI Dashboard",
+			"item": [
+				{
+					"name": "Metrics",
+					"item": [
+						{
+							"name": "List Metric Definitions",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/metrics",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "metrics"],
+									"query": [
+										{
+											"key": "category",
+											"value": "incident_management",
+											"disabled": true
+										},
+										{
+											"key": "isActive",
+											"value": "true",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get all metric definitions with optional filters"
+							}
+						},
+						{
+							"name": "Get Metric Definition by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/metrics/{{metric_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "metrics", "{{metric_id}}"]
+								}
+							}
+						},
+						{
+							"name": "Get Metric Definition by Key",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/metrics/key/incident_resolution_time",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "metrics", "key", "incident_resolution_time"]
+								}
+							}
+						},
+						{
+							"name": "Create Custom Metric",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"metricKey\": \"custom_response_rate\",\n  \"name\": \"Custom Response Rate\",\n  \"description\": \"Average response time for customer inquiries\",\n  \"category\": \"communication\",\n  \"unit\": \"minutes\",\n  \"dataType\": \"number\",\n  \"aggregationType\": \"avg\",\n  \"calculation\": {\n    \"sourceTypes\": [\"slack\", \"teams\"],\n    \"sourceFields\": [\"responseTime\"],\n    \"filters\": {\n      \"channelType\": \"support\"\n    }\n  },\n  \"thresholds\": {\n    \"excellent\": { \"max\": 5 },\n    \"good\": { \"min\": 5, \"max\": 15 },\n    \"warning\": { \"min\": 15, \"max\": 30 },\n    \"critical\": { \"min\": 30 }\n  },\n  \"isActive\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/kpi/metrics",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "metrics"]
+								},
+								"description": "Create a custom metric definition"
+							}
+						},
+						{
+							"name": "Update Metric Definition",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Metric Name\",\n  \"thresholds\": {\n    \"excellent\": { \"max\": 3 },\n    \"good\": { \"min\": 3, \"max\": 10 }\n  },\n  \"isActive\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/kpi/metrics/{{metric_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "metrics", "{{metric_id}}"]
+								}
+							}
+						},
+						{
+							"name": "Delete Metric Definition",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/metrics/{{metric_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "metrics", "{{metric_id}}"]
+								}
+							}
+						},
+						{
+							"name": "Calculate Metric",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"periodStart\": \"2026-01-01T00:00:00Z\",\n  \"periodEnd\": \"2026-01-31T23:59:59Z\",\n  \"granularity\": \"daily\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/kpi/metrics/{{metric_id}}/calculate",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "metrics", "{{metric_id}}", "calculate"]
+								},
+								"description": "Trigger metric calculation for a specific period"
+							}
+						},
+						{
+							"name": "Get Metric Values",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/metrics/{{metric_id}}/values?periodStart=2026-01-01&periodEnd=2026-01-31",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "metrics", "{{metric_id}}", "values"],
+									"query": [
+										{
+											"key": "periodStart",
+											"value": "2026-01-01"
+										},
+										{
+											"key": "periodEnd",
+											"value": "2026-01-31"
+										},
+										{
+											"key": "granularity",
+											"value": "daily",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get calculated metric values for a period"
+							}
+						}
+					]
+				},
+				{
+					"name": "Business Impact",
+					"item": [
+						{
+							"name": "List Business Impacts",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/business-impact?periodStart=2026-01-01&periodEnd=2026-01-31",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "business-impact"],
+									"query": [
+										{
+											"key": "periodStart",
+											"value": "2026-01-01"
+										},
+										{
+											"key": "periodEnd",
+											"value": "2026-01-31"
+										},
+										{
+											"key": "severity",
+											"value": "critical",
+											"disabled": true
+										},
+										{
+											"key": "sourceType",
+											"value": "servicenow",
+											"disabled": true
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Business Impact by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/business-impact/{{impact_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "business-impact", "{{impact_id}}"]
+								}
+							}
+						},
+						{
+							"name": "Create Business Impact",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"sourceType\": \"servicenow\",\n  \"sourceId\": \"incident-sys-id-123\",\n  \"affectedServices\": [\"api-gateway\", \"payment-service\"],\n  \"revenuePerHour\": 5000,\n  \"customersAffected\": 150,\n  \"durationMinutes\": 45,\n  \"recurringImpact\": false\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/kpi/business-impact",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "business-impact"]
+								},
+								"description": "Map revenue impact for an incident"
+							}
+						},
+						{
+							"name": "Estimate Loss",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"includeOpportunityCost\": true,\n  \"includeReputationImpact\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/kpi/business-impact/{{impact_id}}/estimate",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "business-impact", "{{impact_id}}", "estimate"]
+								},
+								"description": "Calculate comprehensive loss estimation"
+							}
+						},
+						{
+							"name": "Validate Impact",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"isValid\": true,\n  \"actualRevenueLoss\": 3500,\n  \"notes\": \"Validated with finance team\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/kpi/business-impact/{{impact_id}}/validate",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "business-impact", "{{impact_id}}", "validate"]
+								}
+							}
+						},
+						{
+							"name": "Get Total Revenue Loss",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/business-impact/total-loss?periodStart=2026-01-01&periodEnd=2026-01-31",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "business-impact", "total-loss"],
+									"query": [
+										{
+											"key": "periodStart",
+											"value": "2026-01-01"
+										},
+										{
+											"key": "periodEnd",
+											"value": "2026-01-31"
+										}
+									]
+								},
+								"description": "Get aggregated revenue loss for a period"
+							}
+						}
+					]
+				},
+				{
+					"name": "Dashboard",
+					"item": [
+						{
+							"name": "Get Organizational Pulse",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/dashboard/organizational-pulse?timeRange=1m",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "dashboard", "organizational-pulse"],
+									"query": [
+										{
+											"key": "timeRange",
+											"value": "1m",
+											"description": "7d, 14d, 1m, 3m, 6m, 1y"
+										},
+										{
+											"key": "periodStart",
+											"value": "2026-01-01",
+											"disabled": true
+										},
+										{
+											"key": "periodEnd",
+											"value": "2026-01-31",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get complete organizational health dashboard data"
+							}
+						},
+						{
+							"name": "Get Organizational Pulse (Last 7 Days)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/dashboard/organizational-pulse?timeRange=7d",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "dashboard", "organizational-pulse"],
+									"query": [
+										{
+											"key": "timeRange",
+											"value": "7d"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Organizational Pulse (Last 3 Months)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/dashboard/organizational-pulse?timeRange=3m",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "dashboard", "organizational-pulse"],
+									"query": [
+										{
+											"key": "timeRange",
+											"value": "3m"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Organizational Pulse (Last Year)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/dashboard/organizational-pulse?timeRange=1y",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "dashboard", "organizational-pulse"],
+									"query": [
+										{
+											"key": "timeRange",
+											"value": "1y"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Organizational Pulse (Custom Date Range)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/dashboard/organizational-pulse?periodStart=2026-01-01&periodEnd=2026-01-31",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "dashboard", "organizational-pulse"],
+									"query": [
+										{
+											"key": "periodStart",
+											"value": "2026-01-01"
+										},
+										{
+											"key": "periodEnd",
+											"value": "2026-01-31"
+										}
+									]
+								}
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}

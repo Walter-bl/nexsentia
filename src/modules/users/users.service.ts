@@ -22,16 +22,15 @@ export class UsersService {
   ) {}
 
   async create(userData: Partial<User>, roleIds?: number[]): Promise<User> {
-    // Check if user already exists
+    // Check if user already exists globally (not just per tenant)
     const existingUser = await this.userRepository.findOne({
       where: {
         email: userData.email,
-        tenantId: userData.tenantId,
       },
     });
 
     if (existingUser) {
-      throw new ConflictException('User with this email already exists in this tenant');
+      throw new ConflictException('User with this email already exists');
     }
 
     // Hash password

@@ -41,14 +41,4 @@ export class RegisterDto {
       'Password must contain at least one uppercase letter, one lowercase letter, and one number or special character',
   })
   password: string;
-
-  @ApiProperty({
-    example: 1,
-    required: false,
-    description: 'Tenant ID (optional for new tenant registration)',
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt({ message: 'Please provide a valid tenant ID' })
-  tenantId?: number;
 }

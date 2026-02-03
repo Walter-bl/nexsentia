@@ -11,15 +11,6 @@ export class TenantsService {
   ) {}
 
   async create(tenantData: Partial<Tenant>): Promise<Tenant> {
-    // Check if tenant already exists
-    const existingTenant = await this.tenantRepository.findOne({
-      where: [{ name: tenantData.name }, { slug: tenantData.slug }],
-    });
-
-    if (existingTenant) {
-      throw new ConflictException('Tenant with this name or slug already exists');
-    }
-
     const tenant = this.tenantRepository.create(tenantData);
     return await this.tenantRepository.save(tenant);
   }

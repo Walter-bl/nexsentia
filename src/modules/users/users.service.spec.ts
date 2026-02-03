@@ -123,7 +123,7 @@ describe('UsersService', () => {
       const result = await service.create(createUserData, [1]);
 
       expect(repository.findOne).toHaveBeenCalledWith({
-        where: { email: createUserData.email, tenantId: createUserData.tenantId },
+        where: { email: createUserData.email },
       });
       expect(bcrypt.genSalt).toHaveBeenCalledWith(10);
       expect(bcrypt.hash).toHaveBeenCalled();
@@ -147,7 +147,7 @@ describe('UsersService', () => {
     it('should throw ConflictException if user already exists', async () => {
       repository.findOne.mockResolvedValue(mockUser as any);
 
-      await expect(service.create(createUserData, [1])).rejects.toThrow('User with this email already exists in this tenant');
+      await expect(service.create(createUserData, [1])).rejects.toThrow('User with this email already exists');
     });
   });
 
