@@ -22,7 +22,8 @@
     "migration:run:prod": "typeorm migration:run -d dist/config/database/typeorm.config.js",
     "migration:revert": "npm run typeorm -- migration:revert -d src/config/database/typeorm.config.ts",
     "migration:revert:prod": "typeorm migration:revert -d dist/config/database/typeorm.config.js",
-    "seed": "ts-node src/database/seeds/index.ts",
+    "seed": "npm run build && node dist/database/seeds/index.js",
+    "seed:dev": "ts-node -r tsconfig-paths/register src/database/seeds/index.ts",
     "seed:prod": "node dist/database/seeds/index.js"
   },
   "keywords": [

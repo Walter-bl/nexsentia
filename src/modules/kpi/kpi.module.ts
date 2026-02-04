@@ -24,6 +24,7 @@ import { KpiValidationService } from './services/kpi-validation.service';
 import { MetricsController } from './controllers/metrics.controller';
 import { BusinessImpactController } from './controllers/business-impact.controller';
 import { DashboardController } from './controllers/dashboard.controller';
+import { KpiSeedController } from './controllers/kpi-seed.controller';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { DashboardController } from './controllers/dashboard.controller';
     MetricsController,
     BusinessImpactController,
     DashboardController,
+    KpiSeedController,
   ],
   providers: [
     MetricDefinitionService,
