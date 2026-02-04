@@ -391,15 +391,15 @@ export class BusinessImpactService {
   }> {
     const impacts = await this.getImpacts(tenantId, periodStart, periodEnd);
 
-    const estimated = impacts.reduce((sum, impact) => sum + (impact.estimatedRevenueLoss || 0), 0);
-    const actual = impacts.reduce((sum, impact) => sum + (impact.actualRevenueLoss || 0), 0);
+    const estimated = impacts.reduce((sum, impact) => sum + (parseFloat(impact.estimatedRevenueLoss as any) || 0), 0);
+    const actual = impacts.reduce((sum, impact) => sum + (parseFloat(impact.actualRevenueLoss as any) || 0), 0);
 
     const byType: Record<string, number> = {};
     const bySeverity: Record<string, number> = {};
 
     for (const impact of impacts) {
-      byType[impact.impactType] = (byType[impact.impactType] || 0) + (impact.estimatedRevenueLoss || 0);
-      bySeverity[impact.severity] = (bySeverity[impact.severity] || 0) + (impact.estimatedRevenueLoss || 0);
+      byType[impact.impactType] = (byType[impact.impactType] || 0) + (parseFloat(impact.estimatedRevenueLoss as any) || 0);
+      bySeverity[impact.severity] = (bySeverity[impact.severity] || 0) + (parseFloat(impact.estimatedRevenueLoss as any) || 0);
     }
 
     return { total: estimated, estimated, actual, byType, bySeverity };

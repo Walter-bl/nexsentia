@@ -104,7 +104,7 @@ export class DashboardController {
       businessEscalations: {
         chartData: escalationsByMonth,
         totalCount: impacts.length,
-        totalLoss: totalLoss.total,
+        totalLoss: parseFloat(totalLoss.total.toString()),
       },
       teamSignals: teamSignals,
       metrics: metricData,
@@ -388,7 +388,7 @@ export class DashboardController {
       monthlyData.push({
         month: monthStart.toISOString().slice(0, 7),
         count: monthImpacts.length,
-        totalLoss: monthImpacts.reduce((sum, i) => sum + (i.estimatedRevenueLoss || 0), 0),
+        totalLoss: monthImpacts.reduce((sum, i) => sum + (parseFloat(i.estimatedRevenueLoss) || 0), 0),
         bySeverity: {
           critical: monthImpacts.filter(i => i.severity === 'critical').length,
           high: monthImpacts.filter(i => i.severity === 'high').length,
