@@ -18,7 +18,7 @@ import {
   DetokenizeRequestDto,
 } from '../dto/scan-request.dto';
 
-@Controller('api/v1/privacy/pii')
+@Controller('privacy/pii')
 @UseGuards(JwtAuthGuard)
 export class PiiController {
   constructor(

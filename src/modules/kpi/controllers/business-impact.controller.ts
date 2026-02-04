@@ -15,7 +15,7 @@ import { BusinessImpactService } from '../services/business-impact.service';
 import { KpiValidationService } from '../services/kpi-validation.service';
 import { CreateBusinessImpactDto, ValidateImpactDto } from '../dto/metric.dto';
 
-@Controller('api/v1/kpi/business-impact')
+@Controller('kpi/business-impact')
 @UseGuards(JwtAuthGuard)
 export class BusinessImpactController {
   constructor(

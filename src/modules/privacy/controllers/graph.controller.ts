@@ -14,7 +14,7 @@ import { GraphBuilderService } from '../services/graph-builder.service';
 import { GraphQueryService } from '../services/graph-query.service';
 import { CreateNodeDto, CreateEdgeDto, GraphQueryDto } from '../dto/graph-query.dto';
 
-@Controller('api/v1/privacy/graph')
+@Controller('privacy/graph')
 @UseGuards(JwtAuthGuard)
 export class GraphController {
   constructor(

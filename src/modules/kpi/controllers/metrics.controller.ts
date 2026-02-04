@@ -15,7 +15,7 @@ import { MetricAggregationService } from '../services/metric-aggregation.service
 import { KpiValidationService } from '../services/kpi-validation.service';
 import { CreateMetricDefinitionDto, CalculateMetricDto } from '../dto/metric.dto';
 
-@Controller('api/v1/kpi/metrics')
+@Controller('kpi/metrics')
 @UseGuards(JwtAuthGuard)
 export class MetricsController {
   constructor(

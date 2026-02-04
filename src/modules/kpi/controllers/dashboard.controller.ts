@@ -17,7 +17,7 @@ import { MetricValue } from '../entities/metric-value.entity';
 import { MetricDefinition } from '../entities/metric-definition.entity';
 import { KpiSnapshot } from '../entities/kpi-snapshot.entity';
 
-@Controller('api/v1/kpi/dashboard')
+@Controller('kpi/dashboard')
 @UseGuards(JwtAuthGuard)
 export class DashboardController {
   constructor(
