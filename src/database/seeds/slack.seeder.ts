@@ -30,7 +30,7 @@ export async function seedSlackData(dataSource: DataSource, tenantId: number): P
       botUserId: 'U01BOT123',
       installingUserId: 'U01USER123',
       isActive: true,
-      totalMessagesSynced: 15,
+      totalMessagesSynced: 1000,
       lastSuccessfulSyncAt: new Date(),
     });
     await slackConnectionRepo.save(slackConnection);
@@ -104,6 +104,128 @@ export async function seedSlackData(dataSource: DataSource, tenantId: number): P
   // ============================================
   // Slack Messages
   // ============================================
+
+  // Generate additional messages for realistic dataset
+  const users = ['U01USER001', 'U01USER002', 'U01USER003', 'U01USER004', 'U01USER005', 'U01USER006', 'U01USER007', 'U01USER008', 'U01USER009', 'U01USER010'];
+
+  const messageTemplates = {
+    incident: [
+      '🚨 INCIDENT: Database connection timeout detected',
+      '⚠️ High memory usage on production servers',
+      'CDN experiencing intermittent connectivity issues',
+      'API rate limits being hit on external service',
+      '🔥 Critical: Authentication service down',
+      'Load balancer health checks failing',
+      'Redis cluster showing increased latency',
+      'Elasticsearch indexing backlog building up',
+      'S3 bucket permissions issue blocking uploads',
+      '🚨 DDoS attack detected, mitigation in progress',
+      'SSL certificate validation failing for subdomain',
+      'Message queue processing delays detected',
+      'Microservice dependency timeout increasing',
+      'Database replication lag exceeding threshold',
+      '✅ RESOLVED: Issue mitigated, monitoring closely',
+      'Incident post-mortem scheduled for tomorrow',
+      'Root cause identified: configuration drift',
+      'Rollback completed successfully',
+      'All systems nominal, closing incident',
+      'Updated runbook based on this incident',
+    ],
+    engineering: [
+      'PR ready for review: New feature implementation',
+      'Code review completed, looks good to merge',
+      'Unit tests passing, ready for QA',
+      'Performance optimization showing 30% improvement',
+      'Refactored authentication module for better maintainability',
+      'Added integration tests for payment flow',
+      'Documentation updated for new API endpoints',
+      'Dependency updates merged, no breaking changes',
+      'Fixed flaky test in CI pipeline',
+      'Implemented caching layer for frequently accessed data',
+      'Migration script tested on staging environment',
+      'API versioning strategy finalized',
+      'Microservice deployment successful',
+      'Feature flag rollout at 25%',
+      'Database index optimization completed',
+      'WebSocket implementation ready for testing',
+      'GraphQL schema updates deployed',
+      'Kubernetes scaling policies updated',
+      'Monitoring dashboards enhanced with new metrics',
+      'Tech debt ticket created for legacy code cleanup',
+    ],
+    general: [
+      'Team meeting in 15 minutes',
+      'Great job on last sprint everyone! 🎉',
+      'Reminder: Company all-hands tomorrow at 10 AM',
+      'New team member starting next week',
+      'Holiday schedule posted in the wiki',
+      'Office will be closed for maintenance this weekend',
+      'Q1 OKRs have been finalized',
+      'Congratulations on the successful product launch!',
+      'Team lunch scheduled for Friday',
+      'Updated PTO policy documents available',
+      'Security awareness training reminder',
+      'New benefits enrollment period open',
+      'Quarterly business review next Wednesday',
+      'IT support tickets should be filed via portal',
+      'Updated code of conduct posted',
+      'Employee survey results shared',
+      'New parking passes available',
+      'Office renovation starting next month',
+      'Team building event planning in progress',
+      'Monthly newsletter published',
+    ],
+  };
+
+  const additionalMessages = [];
+  const now = new Date();
+  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+
+  // Generate 985 additional messages (1000 total - 15 existing)
+  for (let i = 0; i < 985; i++) {
+    const channelIndex = i % 3;
+    let channel: SlackChannel | undefined;
+    let channelType: 'incident' | 'engineering' | 'general';
+
+    if (channelIndex === 0) {
+      channel = incidentChannel;
+      channelType = 'incident';
+    } else if (channelIndex === 1) {
+      channel = engineeringChannel;
+      channelType = 'engineering';
+    } else {
+      channel = generalChannel;
+      channelType = 'general';
+    }
+
+    const templates = messageTemplates[channelType];
+    const text = templates[Math.floor(Math.random() * templates.length)];
+    const user = users[Math.floor(Math.random() * users.length)];
+
+    // Generate timestamp within last 90 days
+    const daysAgo = Math.floor(Math.random() * 90);
+    const hoursOffset = Math.floor(Math.random() * 24);
+    const minutesOffset = Math.floor(Math.random() * 60);
+    const messageDate = new Date(ninetyDaysAgo);
+    messageDate.setDate(messageDate.getDate() + daysAgo);
+    messageDate.setHours(hoursOffset);
+    messageDate.setMinutes(minutesOffset);
+
+    const tsValue = Math.floor(messageDate.getTime() / 1000) + (i * 0.001);
+    const replyCount = Math.floor(Math.random() * 15);
+
+    additionalMessages.push({
+      channelId: channel!.id,
+      slackMessageTs: `${tsValue.toFixed(6)}`,
+      slackChannelId: channel!.slackChannelId,
+      slackUserId: user,
+      text: `${text} [auto-generated #${i + 1}]`,
+      slackCreatedAt: messageDate,
+      type: 'message',
+      replyCount,
+    });
+  }
+
   const messagesData = [
     {
       channelId: incidentChannel!.id,
@@ -279,7 +401,10 @@ export async function seedSlackData(dataSource: DataSource, tenantId: number): P
     },
   ];
 
-  for (const messageData of messagesData) {
+  // Combine original messages with generated ones
+  const allMessages = [...messagesData, ...additionalMessages];
+
+  for (const messageData of allMessages) {
     let message = await slackMessageRepo.findOne({
       where: { slackMessageTs: messageData.slackMessageTs },
     });

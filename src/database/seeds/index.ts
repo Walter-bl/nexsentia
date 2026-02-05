@@ -26,11 +26,11 @@ async function runSeeders() {
     // Run seeders in order
     await seedRolesAndPermissions(dataSource);
 
-    // Create demo tenant and get its ID
-    const demoTenantId = await seedDemoTenant(dataSource);
+    // Create demo tenant and get its ID and user ID
+    const { tenantId: demoTenantId, userId: demoUserId } = await seedDemoTenant(dataSource);
 
     // Seed integration demo data
-    console.log(`📦 Seeding integration demo data for tenant ${demoTenantId}...\n`);
+    console.log(`📦 Seeding integration demo data for tenant ${demoTenantId} (user: ${demoUserId})...\n`);
 
     await seedJiraData(dataSource, demoTenantId);
     await seedSlackData(dataSource, demoTenantId);

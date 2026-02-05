@@ -47,7 +47,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
         syncAttachments: false,
         syncWorkLogs: false,
       },
-      totalIssuesSynced: 20,
+      totalIssuesSynced: 1000,
       lastSuccessfulSyncAt: new Date(),
     });
     await jiraConnectionRepo.save(jiraConnection);
@@ -462,16 +462,103 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
     },
   ];
 
-  for (const issueData of issuesData) {
+  // Generate additional issues for more realistic dataset
+  const additionalIssues: any[] = [];
+  const priorities = ['critical', 'high', 'medium', 'low'];
+  const statuses = ['open', 'in_progress', 'resolved', 'closed'];
+  const issueTypes = ['bug', 'task', 'story', 'incident', 'epic'];
+  const users = [
+    { id: 'user_001', name: 'John Smith' },
+    { id: 'user_002', name: 'Jane Doe' },
+    { id: 'user_003', name: 'Alice Johnson' },
+    { id: 'user_004', name: 'Bob Wilson' },
+    { id: 'user_005', name: 'Charlie Brown' },
+    { id: 'user_006', name: 'Diana Prince' },
+    { id: 'user_007', name: 'Frank Miller' },
+    { id: 'user_008', name: 'Helen Keller' },
+  ];
+
+  const issueTemplates = [
+    { summary: 'API response time degradation', description: 'API endpoints showing increased latency' },
+    { summary: 'Memory leak in background worker', description: 'Worker process consuming excessive memory' },
+    { summary: 'Login authentication failing intermittently', description: 'Users reporting random login failures' },
+    { summary: 'Email notifications not being delivered', description: 'Notification service queue backed up' },
+    { summary: 'Data export feature timeout', description: 'Large exports timing out after 30s' },
+    { summary: 'Search functionality returning incorrect results', description: 'Search index appears to be stale' },
+    { summary: 'Mobile app crash on Android 13', description: 'App crashing on specific Android version' },
+    { summary: 'Dashboard loading slowly', description: 'Dashboard taking 10+ seconds to load' },
+    { summary: 'File upload failing for large files', description: 'Files over 50MB fail to upload' },
+    { summary: 'Integration with third-party service broken', description: 'API changes from vendor breaking integration' },
+    { summary: 'Report generation producing empty PDFs', description: 'PDF export functionality broken' },
+    { summary: 'Cache invalidation not working properly', description: 'Stale data being served to users' },
+    { summary: 'Database query optimization needed', description: 'Slow queries impacting performance' },
+    { summary: 'Rate limiting not functioning correctly', description: 'Rate limits being bypassed' },
+    { summary: 'Webhook delivery failures', description: 'Webhooks timing out or failing' },
+    { summary: 'UI element alignment issues on mobile', description: 'Layout broken on small screens' },
+    { summary: 'Data validation allowing invalid inputs', description: 'Form validation needs improvement' },
+    { summary: 'Session timeout too aggressive', description: 'Users being logged out too quickly' },
+    { summary: 'Backup process failing silently', description: 'Backup job completing without actual backup' },
+    { summary: 'Analytics tracking not capturing events', description: 'Missing analytics data for user actions' },
+  ];
+
+  // Generate 980 more issues (total will be 1000)
+  for (let i = 0; i < 980; i++) {
+    const projectOptions = [prodProject, engProject, supProject];
+    const project = projectOptions[i % 3];
+    const projectPrefix = project!.jiraProjectKey;
+    const template = issueTemplates[i % issueTemplates.length];
+    const priority = priorities[Math.floor(Math.random() * priorities.length)];
+    const status = statuses[Math.floor(Math.random() * statuses.length)];
+    const issueType = issueTypes[Math.floor(Math.random() * issueTypes.length)];
+    const assignee = users[Math.floor(Math.random() * users.length)];
+    const reporter = users[Math.floor(Math.random() * users.length)];
+
+    // Generate dates within last 90 days
+    const daysAgo = Math.floor(Math.random() * 90);
+    const createdDate = new Date();
+    createdDate.setDate(createdDate.getDate() - daysAgo);
+
+    const updatedDate = new Date(createdDate);
+    updatedDate.setHours(updatedDate.getHours() + Math.floor(Math.random() * 48));
+
+    const issue: any = {
+      projectId: project!.id,
+      jiraIssueId: `issue_${80000 + i}`,
+      jiraIssueKey: `${projectPrefix}-${3000 + i}`,
+      summary: `${template.summary} #${i + 1}`,
+      description: template.description,
+      issueType,
+      status,
+      priority,
+      assigneeAccountId: assignee.id,
+      assigneeDisplayName: assignee.name,
+      reporterAccountId: reporter.id,
+      reporterDisplayName: reporter.name,
+      jiraCreatedAt: createdDate,
+      jiraUpdatedAt: updatedDate,
+    };
+
+    // Add resolved date if status is resolved or closed
+    if (status === 'resolved' || status === 'closed') {
+      issue.resolvedAt = updatedDate;
+    }
+
+    additionalIssues.push(issue);
+  }
+
+  // Combine original and generated issues
+  const allIssues = [...issuesData, ...additionalIssues];
+
+  for (const issueData of allIssues) {
     // Make jiraIssueId unique per tenant
     const uniqueJiraIssueId = `${issueData.jiraIssueId}_t${tenantId}`;
 
-    let issue = await jiraIssueRepo.findOne({
+    const existingIssue = await jiraIssueRepo.findOne({
       where: { jiraIssueId: uniqueJiraIssueId, tenantId },
     });
 
-    if (!issue) {
-      issue = jiraIssueRepo.create({
+    if (!existingIssue) {
+      const issue = jiraIssueRepo.create({
         ...issueData,
         jiraIssueId: uniqueJiraIssueId,
         tenantId,

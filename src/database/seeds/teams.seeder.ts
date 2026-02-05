@@ -98,6 +98,141 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
   // ============================================
   // Teams Messages
   // ============================================
+
+  // Generate additional messages for realistic dataset
+  const users = ['user_teams_001', 'user_teams_002', 'user_teams_003', 'user_teams_004', 'user_teams_005', 'user_teams_006', 'user_teams_007', 'user_teams_008'];
+  const importanceLevels = ['normal', 'normal', 'normal', 'normal', 'urgent'] as const; // More normal than urgent
+
+  const messageTemplates = {
+    engineering: [
+      'PR merged: Enhanced logging for microservices',
+      'Release candidate built successfully',
+      'Load testing results: System handles 10k concurrent users',
+      'New feature branch created for OAuth 2.0 migration',
+      'Documentation updated for REST API v3',
+      'Dependency vulnerability patched',
+      'Database schema migration completed',
+      'A/B test results show 15% improvement',
+      'CI/CD pipeline optimization reduced build time',
+      'Technical design doc ready for review',
+      'Monitoring alerts configured for new service',
+      'Kubernetes deployment manifests updated',
+      'Code coverage increased to 85%',
+      'API rate limiting implemented',
+      'Microservice health check endpoints added',
+      'Feature toggle system deployed',
+      'Performance profiling completed',
+      'GraphQL subscriptions now available',
+      'Container image size reduced by 40%',
+      'End-to-end tests passing in all environments',
+    ],
+    support: [
+      'Customer ticket #XXX: Issue with password reset',
+      'Escalation: Enterprise client reporting downtime',
+      'Resolved: Mobile app crash on Android 12',
+      'Known issue: Export button disabled for large datasets',
+      'Workaround provided for IE11 compatibility',
+      'Customer feedback: Dashboard UX improvements needed',
+      'SLA breach alert: Priority 1 ticket aging',
+      'Billing inquiry resolved',
+      'Feature request: Dark mode for admin panel',
+      'Customer success call scheduled',
+      'Training session for new product features',
+      'Bug fix deployed for email notification timing',
+      'Customer reported data sync delay',
+      'Premium support ticket: Integration assistance',
+      'User reported login timeout issue',
+      'Feedback collected from customer survey',
+      'Account upgrade completed successfully',
+      'Customer onboarding scheduled',
+      'Issue reproduced in test environment',
+      'Root cause analysis completed',
+    ],
+    general: [
+      'Team standup starting in 5 minutes',
+      'Monthly newsletter published',
+      'New office hours effective next week',
+      'Congratulations on the product launch!',
+      'Team building event: Friday lunch',
+      'Security training mandatory for all staff',
+      'IT maintenance window this Saturday',
+      'Employee recognition: Outstanding work this quarter',
+      'Updated vacation policy available',
+      'Quarterly goals presentation scheduled',
+      'New starter guide updated',
+      'Company town hall meeting notes shared',
+      'Benefits enrollment period closing soon',
+      'Office supplies order being placed',
+      'Remote work policy clarification',
+      'Team photo session next week',
+      'Holiday schedule posted',
+      'Parking lot construction notice',
+      'New conference room booking system',
+      'Department budget review meeting',
+    ],
+  };
+
+  const additionalMessages = [];
+  const now = new Date();
+  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+
+  // Generate 990 additional messages (1000 total - 10 existing)
+  for (let i = 0; i < 990; i++) {
+    const channelIndex = i % 3;
+    let channel: TeamsChannel | undefined;
+    let channelType: 'engineering' | 'support' | 'general';
+    let teamsChannelId: string;
+
+    if (channelIndex === 0) {
+      channel = engineeringChannel;
+      channelType = 'engineering';
+      teamsChannelId = 'channel_eng_002';
+    } else if (channelIndex === 1) {
+      channel = supportChannel;
+      channelType = 'support';
+      teamsChannelId = 'channel_support_003';
+    } else {
+      channel = generalChannel;
+      channelType = 'general';
+      teamsChannelId = 'channel_general_001';
+    }
+
+    const templates = messageTemplates[channelType];
+    let content = templates[Math.floor(Math.random() * templates.length)];
+
+    // Add ticket number for support messages
+    if (channelType === 'support' && content.includes('#XXX')) {
+      const ticketNum = 3000 + i;
+      content = content.replace('#XXX', `#${ticketNum}`);
+    }
+
+    const user = users[Math.floor(Math.random() * users.length)];
+    const importance = importanceLevels[Math.floor(Math.random() * importanceLevels.length)];
+
+    // Generate timestamp within last 90 days
+    const daysAgo = Math.floor(Math.random() * 90);
+    const hoursOffset = Math.floor(Math.random() * 24);
+    const minutesOffset = Math.floor(Math.random() * 60);
+    const messageDate = new Date(ninetyDaysAgo);
+    messageDate.setDate(messageDate.getDate() + daysAgo);
+    messageDate.setHours(hoursOffset);
+    messageDate.setMinutes(minutesOffset);
+
+    additionalMessages.push({
+      channelId: channel!.id,
+      messageId: `teams_msg_gen_${i + 1}`,
+      teamId: 'team_demo_001',
+      teamsChannelId,
+      teamsUserId: user,
+      content: `${content} [auto-generated #${i + 1}]`,
+      contentType: 'html' as const,
+      messageType: 'message' as const,
+      importance,
+      createdDateTime: messageDate,
+      lastModifiedDateTime: messageDate,
+    });
+  }
+
   const messagesData = [
     {
       channelId: engineeringChannel!.id,
@@ -231,7 +366,10 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
     },
   ];
 
-  for (const messageData of messagesData) {
+  // Combine original messages with generated ones
+  const allMessages = [...messagesData, ...additionalMessages];
+
+  for (const messageData of allMessages) {
     let message = await teamsMessageRepo.findOne({
       where: { messageId: messageData.messageId },
     });
