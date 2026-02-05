@@ -463,13 +463,17 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
   ];
 
   for (const issueData of issuesData) {
+    // Make jiraIssueId unique per tenant
+    const uniqueJiraIssueId = `${issueData.jiraIssueId}_t${tenantId}`;
+
     let issue = await jiraIssueRepo.findOne({
-      where: { jiraIssueId: issueData.jiraIssueId },
+      where: { jiraIssueId: uniqueJiraIssueId, tenantId },
     });
 
     if (!issue) {
       issue = jiraIssueRepo.create({
         ...issueData,
+        jiraIssueId: uniqueJiraIssueId,
         tenantId,
       });
       await jiraIssueRepo.save(issue);

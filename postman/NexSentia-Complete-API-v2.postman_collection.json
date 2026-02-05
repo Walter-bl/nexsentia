@@ -1073,6 +1073,101 @@
 			"name": "Privacy & PII",
 			"item": [
 				{
+					"name": "Dashboard",
+					"item": [
+						{
+							"name": "Get Privacy Dashboard",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/privacy/dashboard",
+									"host": ["{{base_url}}"],
+									"path": ["privacy", "dashboard"]
+								},
+								"description": "Get complete privacy dashboard overview including architecture, data sources, guarantees, and compliance status"
+							}
+						},
+						{
+							"name": "Get Privacy Architecture",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/privacy/dashboard/architecture",
+									"host": ["{{base_url}}"],
+									"path": ["privacy", "dashboard", "architecture"]
+								},
+								"description": "Get privacy-first architecture metrics: anonymization rate, PII stored, SOC2/GDPR compliance"
+							}
+						},
+						{
+							"name": "Get Data Sources",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/privacy/dashboard/data-sources",
+									"host": ["{{base_url}}"],
+									"path": ["privacy", "dashboard", "data-sources"]
+								},
+								"description": "Get all connected data sources (Jira, Slack, Teams, ServiceNow, Outlook, Gmail) with privacy statistics"
+							}
+						},
+						{
+							"name": "Get Privacy Guarantees",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/privacy/dashboard/guarantees",
+									"host": ["{{base_url}}"],
+									"path": ["privacy", "dashboard", "guarantees"]
+								},
+								"description": "Get privacy guarantees: fully anonymized, no personal identification, no data storage, ephemeral processing"
+							}
+						},
+						{
+							"name": "Get Compliance Status",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/privacy/dashboard/compliance",
+									"host": ["{{base_url}}"],
+									"path": ["privacy", "dashboard", "compliance"]
+								},
+								"description": "Get compliance status for SOC2, GDPR, HIPAA, and CCPA"
+							}
+						}
+					]
+				},
+				{
 					"name": "Anonymize PII",
 					"request": {
 						"method": "POST",
@@ -1702,6 +1797,400 @@
 							}
 						}
 					]
+				}
+			]
+		},
+		{
+			"name": "Action Center",
+			"item": [
+				{
+					"name": "Get All Actions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/action-center",
+							"host": ["{{base_url}}"],
+							"path": ["action-center"]
+						},
+						"description": "Get all action items generated from ingested data (Jira, ServiceNow, Timeline, KPIs). Returns actions with stats and status counts."
+					}
+				},
+				{
+					"name": "Get Actions by Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/action-center?status=open",
+							"host": ["{{base_url}}"],
+							"path": ["action-center"],
+							"query": [
+								{
+									"key": "status",
+									"value": "open",
+									"description": "open, in_progress, done"
+								}
+							]
+						},
+						"description": "Filter actions by status (open, in_progress, done)"
+					}
+				},
+				{
+					"name": "Get Actions by Priority",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/action-center?priority=critical",
+							"host": ["{{base_url}}"],
+							"path": ["action-center"],
+							"query": [
+								{
+									"key": "priority",
+									"value": "critical",
+									"description": "critical, high, medium, low"
+								}
+							]
+						},
+						"description": "Filter actions by priority level (critical, high, medium, low)"
+					}
+				},
+				{
+					"name": "Search Actions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/action-center?search=deployment",
+							"host": ["{{base_url}}"],
+							"path": ["action-center"],
+							"query": [
+								{
+									"key": "search",
+									"value": "deployment",
+									"description": "Search in title and description"
+								}
+							]
+						},
+						"description": "Search actions by keyword in title and description"
+					}
+				},
+				{
+					"name": "Get Actions - Combined Filters",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/action-center?status=open&priority=critical&search=infrastructure",
+							"host": ["{{base_url}}"],
+							"path": ["action-center"],
+							"query": [
+								{
+									"key": "status",
+									"value": "open"
+								},
+								{
+									"key": "priority",
+									"value": "critical"
+								},
+								{
+									"key": "search",
+									"value": "infrastructure"
+								}
+							]
+						},
+						"description": "Use multiple filters together (status + priority + search)"
+					}
+				},
+				{
+					"name": "Get Action Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/action-center/statistics",
+							"host": ["{{base_url}}"],
+							"path": ["action-center", "statistics"]
+						},
+						"description": "Get action center statistics: total sources, PII stored, active connections, status counts"
+					}
+				}
+			]
+		},
+		{
+			"name": "Timeline",
+			"item": [
+				{
+					"name": "List Timeline Events",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/timeline?page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["timeline"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "startDate",
+									"value": "2026-01-01",
+									"disabled": true
+								},
+								{
+									"key": "endDate",
+									"value": "2026-01-31",
+									"disabled": true
+								},
+								{
+									"key": "impactLevel",
+									"value": "high",
+									"disabled": true,
+									"description": "high, medium, low"
+								},
+								{
+									"key": "category",
+									"value": "Communication",
+									"disabled": true
+								},
+								{
+									"key": "isResolved",
+									"value": "false",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get timeline events with optional filters and pagination"
+					}
+				},
+				{
+					"name": "Get Timeline Event by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/timeline/1",
+							"host": ["{{base_url}}"],
+							"path": ["timeline", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Timeline Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/timeline/statistics",
+							"host": ["{{base_url}}"],
+							"path": ["timeline", "statistics"],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2026-01-01",
+									"disabled": true
+								},
+								{
+									"key": "endDate",
+									"value": "2026-01-31",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get timeline statistics including counts by impact level, category, and resolution status"
+					}
+				},
+				{
+					"name": "Create Timeline Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Communication Bottleneck Detected\",\n  \"description\": \"AI detected unusual delay patterns in cross-team communication with Engineering and Support teams showing decreased message frequency and increased response times.\",\n  \"eventDate\": \"2026-02-03T10:30:00Z\",\n  \"impactLevel\": \"high\",\n  \"category\": \"Communication\",\n  \"sourceType\": \"ai_detection\",\n  \"metadata\": {\n    \"affectedTeams\": [\"Engineering\", \"Support\", \"Product\"],\n    \"detectionConfidence\": 0.87,\n    \"dataPoints\": 156\n  },\n  \"aiAnalysis\": {\n    \"detectedPattern\": \"cross_team_communication_delay\",\n    \"severity\": \"high\",\n    \"rootCause\": \"Increased workload in Engineering team causing delayed responses to Support queries\",\n    \"predictedImpact\": \"May lead to customer escalations if not addressed within 48 hours\",\n    \"suggestedActions\": [\n      \"Schedule cross-team sync meeting\",\n      \"Review Engineering team capacity\",\n      \"Implement communication SLA monitoring\"\n    ]\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/timeline",
+							"host": ["{{base_url}}"],
+							"path": ["timeline"]
+						},
+						"description": "Create a new timeline event with AI analysis and metadata"
+					}
+				},
+				{
+					"name": "Create Timeline Event - Simple",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Team Velocity Decrease\",\n  \"description\": \"Sprint velocity dropped by 30% compared to previous sprint\",\n  \"eventDate\": \"2026-02-04T09:00:00Z\",\n  \"impactLevel\": \"medium\",\n  \"category\": \"Team Performance\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/timeline",
+							"host": ["{{base_url}}"],
+							"path": ["timeline"]
+						},
+						"description": "Create a simple timeline event without metadata"
+					}
+				},
+				{
+					"name": "Update Timeline Event",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Communication Bottleneck Resolved\",\n  \"description\": \"Updated description with resolution details\",\n  \"isResolved\": true,\n  \"resolutionNotes\": \"Scheduled daily standup between Engineering and Support teams. Communication delays reduced by 70%.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/timeline/1",
+							"host": ["{{base_url}}"],
+							"path": ["timeline", "1"]
+						},
+						"description": "Update timeline event and mark as resolved"
+					}
+				},
+				{
+					"name": "Update Timeline Event - Unresolve",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"isResolved\": false,\n  \"resolutionNotes\": \"Issue resurfaced, needs further investigation\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/timeline/1",
+							"host": ["{{base_url}}"],
+							"path": ["timeline", "1"]
+						},
+						"description": "Mark event as unresolved"
+					}
+				},
+				{
+					"name": "Delete Timeline Event",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/timeline/1",
+							"host": ["{{base_url}}"],
+							"path": ["timeline", "1"]
+						},
+						"description": "Soft delete a timeline event"
+					}
+				},
+				{
+					"name": "Auto-Detect Timeline Events",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-Tenant-Id",
+								"value": "{{tenant_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/timeline/auto-detect",
+							"host": ["{{base_url}}"],
+							"path": ["timeline", "auto-detect"]
+						},
+						"description": "Trigger AI-based auto-detection of timeline events from integration data (Jira, Slack, Teams, ServiceNow, KPIs)"
+					}
 				}
 			]
 		}

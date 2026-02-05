@@ -22,6 +22,8 @@ import { TeamsModule } from './modules/teams/teams.module';
 import { ServiceNowModule } from './modules/servicenow/servicenow.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
 import { KpiModule } from './modules/kpi/kpi.module';
+import { TimelineModule } from './modules/timeline/timeline.module';
+import { ActionCenterModule } from './modules/action-center/action-center.module';
 import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.interceptor';
 
 @Module({
@@ -67,6 +69,8 @@ import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.int
     ServiceNowModule,
     PrivacyModule,
     KpiModule,
+    TimelineModule,
+    ActionCenterModule,
   ],
   controllers: [],
   providers: [
