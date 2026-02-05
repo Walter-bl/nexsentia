@@ -1804,147 +1804,466 @@
 			"name": "Action Center",
 			"item": [
 				{
-					"name": "Get All Actions",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "X-Tenant-Id",
-								"value": "{{tenant_id}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/action-center",
-							"host": ["{{base_url}}"],
-							"path": ["action-center"]
-						},
-						"description": "Get all action items generated from ingested data (Jira, ServiceNow, Timeline, KPIs). Returns actions with stats and status counts."
-					}
-				},
-				{
-					"name": "Get Actions by Status",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "X-Tenant-Id",
-								"value": "{{tenant_id}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/action-center?status=open",
-							"host": ["{{base_url}}"],
-							"path": ["action-center"],
-							"query": [
-								{
-									"key": "status",
-									"value": "open",
-									"description": "open, in_progress, done"
-								}
-							]
-						},
-						"description": "Filter actions by status (open, in_progress, done)"
-					}
-				},
-				{
-					"name": "Get Actions by Priority",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "X-Tenant-Id",
-								"value": "{{tenant_id}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/action-center?priority=critical",
-							"host": ["{{base_url}}"],
-							"path": ["action-center"],
-							"query": [
-								{
-									"key": "priority",
-									"value": "critical",
-									"description": "critical, high, medium, low"
-								}
-							]
-						},
-						"description": "Filter actions by priority level (critical, high, medium, low)"
-					}
-				},
-				{
-					"name": "Search Actions",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "X-Tenant-Id",
-								"value": "{{tenant_id}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/action-center?search=deployment",
-							"host": ["{{base_url}}"],
-							"path": ["action-center"],
-							"query": [
-								{
-									"key": "search",
-									"value": "deployment",
-									"description": "Search in title and description"
-								}
-							]
-						},
-						"description": "Search actions by keyword in title and description"
-					}
-				},
-				{
-					"name": "Get Actions - Combined Filters",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "X-Tenant-Id",
-								"value": "{{tenant_id}}"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/action-center?status=open&priority=critical&search=infrastructure",
-							"host": ["{{base_url}}"],
-							"path": ["action-center"],
-							"query": [
-								{
-									"key": "status",
-									"value": "open"
+					"name": "Actions",
+					"item": [
+						{
+							"name": "Get All Actions",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"]
 								},
-								{
-									"key": "priority",
-									"value": "critical"
-								},
-								{
-									"key": "search",
-									"value": "infrastructure"
-								}
-							]
+								"description": "Get all action items generated from ingested data sources (Jira, ServiceNow, Timeline, KPIs). Returns dynamically generated actions with statistics and status counts."
+							}
 						},
-						"description": "Use multiple filters together (status + priority + search)"
-					}
+						{
+							"name": "Get Actions by Status - Open",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center?status=open",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"],
+									"query": [
+										{
+											"key": "status",
+											"value": "open",
+											"description": "Filter by open status"
+										}
+									]
+								},
+								"description": "Get all open action items (not started yet)"
+							}
+						},
+						{
+							"name": "Get Actions by Status - In Progress",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center?status=in_progress",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"],
+									"query": [
+										{
+											"key": "status",
+											"value": "in_progress",
+											"description": "Filter by in progress status"
+										}
+									]
+								},
+								"description": "Get all action items currently in progress"
+							}
+						},
+						{
+							"name": "Get Actions by Status - Done",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center?status=done",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"],
+									"query": [
+										{
+											"key": "status",
+											"value": "done",
+											"description": "Filter by completed status"
+										}
+									]
+								},
+								"description": "Get all completed action items"
+							}
+						},
+						{
+							"name": "Get Actions by Priority - Critical",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center?priority=critical",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"],
+									"query": [
+										{
+											"key": "priority",
+											"value": "critical",
+											"description": "Filter by critical priority"
+										}
+									]
+								},
+								"description": "Get all critical priority action items (requires immediate attention)"
+							}
+						},
+						{
+							"name": "Get Actions by Priority - High",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center?priority=high",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"],
+									"query": [
+										{
+											"key": "priority",
+											"value": "high",
+											"description": "Filter by high priority"
+										}
+									]
+								},
+								"description": "Get all high priority action items"
+							}
+						},
+						{
+							"name": "Get Actions by Priority - Medium",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center?priority=medium",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"],
+									"query": [
+										{
+											"key": "priority",
+											"value": "medium",
+											"description": "Filter by medium priority"
+										}
+									]
+								},
+								"description": "Get all medium priority action items"
+							}
+						},
+						{
+							"name": "Get Actions by Priority - Low",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center?priority=low",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"],
+									"query": [
+										{
+											"key": "priority",
+											"value": "low",
+											"description": "Filter by low priority"
+										}
+									]
+								},
+								"description": "Get all low priority action items"
+							}
+						},
+						{
+							"name": "Search Actions",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center?search=deployment",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"],
+									"query": [
+										{
+											"key": "search",
+											"value": "deployment",
+											"description": "Search in title and description"
+										}
+									]
+								},
+								"description": "Search actions by keyword in title and description fields"
+							}
+						},
+						{
+							"name": "Get Actions - Combined Filters",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center?status=open&priority=critical&search=infrastructure",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"],
+									"query": [
+										{
+											"key": "status",
+											"value": "open",
+											"description": "open, in_progress, done"
+										},
+										{
+											"key": "priority",
+											"value": "critical",
+											"description": "critical, high, medium, low"
+										},
+										{
+											"key": "search",
+											"value": "infrastructure",
+											"description": "Search keyword"
+										}
+									]
+								},
+								"description": "Use multiple filters together: status + priority + search. All filters are optional and can be combined."
+							}
+						},
+						{
+							"name": "Get Actions by Source - Jira",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center?search=jira",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"],
+									"query": [
+										{
+											"key": "search",
+											"value": "jira",
+											"description": "Search for Jira-sourced actions"
+										}
+									]
+								},
+								"description": "Get actions generated from Jira issues"
+							}
+						},
+						{
+							"name": "Get Actions by Source - ServiceNow",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center?search=servicenow",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"],
+									"query": [
+										{
+											"key": "search",
+											"value": "servicenow",
+											"description": "Search for ServiceNow-sourced actions"
+										}
+									]
+								},
+								"description": "Get actions generated from ServiceNow incidents"
+							}
+						}
+					]
 				},
 				{
-					"name": "Get Action Statistics",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "X-Tenant-Id",
-								"value": "{{tenant_id}}"
+					"name": "Statistics",
+					"item": [
+						{
+							"name": "Get Action Center Statistics",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center/statistics",
+									"host": ["{{base_url}}"],
+									"path": ["action-center", "statistics"]
+								},
+								"description": "Get comprehensive Action Center statistics including total sources, PII stored, active connections, and status counts (open, in_progress, done)"
 							}
-						],
-						"url": {
-							"raw": "{{base_url}}/action-center/statistics",
-							"host": ["{{base_url}}"],
-							"path": ["action-center", "statistics"]
 						},
-						"description": "Get action center statistics: total sources, PII stored, active connections, status counts"
-					}
+						{
+							"name": "Get Action Center Overview",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"]
+								},
+								"description": "Get overview including all actions and statistics. The response includes both 'actions' array and 'stats' object with counts and connection information."
+							}
+						}
+					]
+				},
+				{
+					"name": "Examples",
+					"item": [
+						{
+							"name": "Example - Critical Open Actions",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center?status=open&priority=critical",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"],
+									"query": [
+										{
+											"key": "status",
+											"value": "open"
+										},
+										{
+											"key": "priority",
+											"value": "critical"
+										}
+									]
+								},
+								"description": "Example: Get all open critical actions that need immediate attention"
+							}
+						},
+						{
+							"name": "Example - In Progress High Priority",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center?status=in_progress&priority=high",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"],
+									"query": [
+										{
+											"key": "status",
+											"value": "in_progress"
+										},
+										{
+											"key": "priority",
+											"value": "high"
+										}
+									]
+								},
+								"description": "Example: Get all high priority actions currently being worked on"
+							}
+						},
+						{
+							"name": "Example - Search Infrastructure Issues",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center?search=infrastructure&status=open",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"],
+									"query": [
+										{
+											"key": "search",
+											"value": "infrastructure"
+										},
+										{
+											"key": "status",
+											"value": "open"
+										}
+									]
+								},
+								"description": "Example: Find all open infrastructure-related actions"
+							}
+						},
+						{
+							"name": "Example - Search API or Database Issues",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/action-center?search=api database",
+									"host": ["{{base_url}}"],
+									"path": ["action-center"],
+									"query": [
+										{
+											"key": "search",
+											"value": "api database"
+										}
+									]
+								},
+								"description": "Example: Search for actions related to API or database issues"
+							}
+						}
+					]
 				}
 			]
 		},

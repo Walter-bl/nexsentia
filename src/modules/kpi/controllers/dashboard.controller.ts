@@ -16,6 +16,10 @@ import { KpiValidationService } from '../services/kpi-validation.service';
 import { MetricValue } from '../entities/metric-value.entity';
 import { MetricDefinition } from '../entities/metric-definition.entity';
 import { KpiSnapshot } from '../entities/kpi-snapshot.entity';
+import { JiraIssue } from '../../jira/entities/jira-issue.entity';
+import { ServiceNowIncident } from '../../servicenow/entities/servicenow-incident.entity';
+import { SlackMessage } from '../../slack/entities/slack-message.entity';
+import { TeamsMessage } from '../../teams/entities/teams-message.entity';
 
 @Controller('kpi/dashboard')
 @UseGuards(JwtAuthGuard)
@@ -27,6 +31,14 @@ export class DashboardController {
     private readonly metricDefinitionRepository: Repository<MetricDefinition>,
     @InjectRepository(KpiSnapshot)
     private readonly snapshotRepository: Repository<KpiSnapshot>,
+    @InjectRepository(JiraIssue)
+    private readonly jiraIssueRepository: Repository<JiraIssue>,
+    @InjectRepository(ServiceNowIncident)
+    private readonly serviceNowIncidentRepository: Repository<ServiceNowIncident>,
+    @InjectRepository(SlackMessage)
+    private readonly slackMessageRepository: Repository<SlackMessage>,
+    @InjectRepository(TeamsMessage)
+    private readonly teamsMessageRepository: Repository<TeamsMessage>,
     private readonly definitionService: MetricDefinitionService,
     private readonly aggregationService: MetricAggregationService,
     private readonly impactService: BusinessImpactService,
@@ -87,6 +99,12 @@ export class DashboardController {
     // Get team signals breakdown
     const teamSignals = this.getTeamSignals(metricData);
 
+    // Get recent signals (timeline events)
+    const recentSignals = await this.getRecentSignals(tenantId, end);
+
+    // Get signal distribution by theme
+    const signalDistribution = await this.getSignalDistributionByTheme(tenantId, start, end);
+
     return {
       overallHealth: {
         score: Math.round(summary.overallHealth),
@@ -107,6 +125,8 @@ export class DashboardController {
         totalLoss: parseFloat(totalLoss.total.toString()),
       },
       teamSignals: teamSignals,
+      recentSignals: recentSignals,
+      signalDistribution: signalDistribution,
       metrics: metricData,
       period: { start, end },
     };
@@ -518,5 +538,245 @@ export class DashboardController {
     }
 
     return signals;
+  }
+
+  private async getRecentSignals(tenantId: number, endDate: Date): Promise<Array<{
+    id: string;
+    type: 'incident' | 'communication' | 'task';
+    title: string;
+    description: string;
+    source: 'jira' | 'servicenow' | 'slack' | 'teams';
+    severity?: 'critical' | 'high' | 'medium' | 'low';
+    timestamp: Date;
+    team?: string;
+  }>> {
+    const signals: Array<any> = [];
+
+    // Get recent Jira issues (last 10)
+    const jiraIssues = await this.jiraIssueRepository.find({
+      where: {
+        tenantId,
+      },
+      order: {
+        jiraCreatedAt: 'DESC',
+      },
+      take: 5,
+    });
+
+    for (const issue of jiraIssues) {
+      signals.push({
+        id: `jira_${issue.id}`,
+        type: issue.issueType === 'incident' ? 'incident' : 'task',
+        title: issue.summary,
+        description: issue.description || '',
+        source: 'jira',
+        severity: this.mapJiraPriorityToSeverity(issue.priority),
+        timestamp: issue.jiraCreatedAt,
+        team: 'Engineering',
+      });
+    }
+
+    // Get recent ServiceNow incidents (last 10)
+    const incidents = await this.serviceNowIncidentRepository.find({
+      where: {
+        tenantId,
+      },
+      order: {
+        openedAt: 'DESC',
+      },
+      take: 5,
+    });
+
+    for (const incident of incidents) {
+      signals.push({
+        id: `servicenow_${incident.id}`,
+        type: 'incident',
+        title: incident.shortDescription,
+        description: incident.description || '',
+        source: 'servicenow',
+        severity: this.mapServiceNowPriorityToSeverity(incident.priority),
+        timestamp: incident.openedAt,
+        team: incident.assignmentGroupName || 'Support',
+      });
+    }
+
+    // Get recent Slack messages (last 5 with high engagement)
+    const slackMessages = await this.slackMessageRepository.find({
+      where: {
+        tenantId,
+      },
+      order: {
+        slackCreatedAt: 'DESC',
+      },
+      take: 3,
+    });
+
+    for (const message of slackMessages) {
+      signals.push({
+        id: `slack_${message.id}`,
+        type: 'communication',
+        title: this.truncateText(message.text, 80),
+        description: message.text,
+        source: 'slack',
+        timestamp: message.slackCreatedAt,
+        team: 'Engineering',
+      });
+    }
+
+    // Get recent Teams messages (last 5)
+    const teamsMessages = await this.teamsMessageRepository.find({
+      where: {
+        tenantId,
+      },
+      order: {
+        createdDateTime: 'DESC',
+      },
+      take: 2,
+    });
+
+    for (const message of teamsMessages) {
+      signals.push({
+        id: `teams_${message.id}`,
+        type: 'communication',
+        title: this.truncateText(message.content || '', 80),
+        description: message.content || '',
+        source: 'teams',
+        timestamp: message.createdDateTime,
+        team: 'Product',
+      });
+    }
+
+    // Sort all signals by timestamp (most recent first) and return top 15
+    return signals
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, 15);
+  }
+
+  private async getSignalDistributionByTheme(
+    tenantId: number,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<Array<{
+    theme: string;
+    incidentCount: number;
+    signalCount: number;
+    color: string;
+  }>> {
+    // Count incidents and signals by theme/category
+    const [
+      jiraIssues,
+      serviceNowIncidents,
+      slackMessages,
+      teamsMessages,
+    ] = await Promise.all([
+      this.jiraIssueRepository.count({
+        where: {
+          tenantId,
+          jiraCreatedAt: Between(startDate, endDate),
+        },
+      }),
+      this.serviceNowIncidentRepository.count({
+        where: {
+          tenantId,
+          openedAt: Between(startDate, endDate),
+        },
+      }),
+      this.slackMessageRepository.count({
+        where: {
+          tenantId,
+          slackCreatedAt: Between(startDate, endDate),
+        },
+      }),
+      this.teamsMessageRepository.count({
+        where: {
+          tenantId,
+          createdDateTime: Between(startDate, endDate),
+        },
+      }),
+    ]);
+
+    // Get incidents by category for more detailed breakdown
+    const incidents = await this.serviceNowIncidentRepository.find({
+      where: {
+        tenantId,
+        openedAt: Between(startDate, endDate),
+      },
+      select: ['category', 'priority'],
+    });
+
+    const issues = await this.jiraIssueRepository.find({
+      where: {
+        tenantId,
+        jiraCreatedAt: Between(startDate, endDate),
+      },
+      select: ['issueType', 'priority'],
+    });
+
+    // Categorize by theme
+    const themes = {
+      Communication: {
+        incidentCount: 0,
+        signalCount: slackMessages + teamsMessages,
+        color: '#10b981', // green
+      },
+      System: {
+        incidentCount: incidents.filter(i =>
+          i.category === 'Infrastructure' || i.category === 'Network'
+        ).length,
+        signalCount: incidents.filter(i =>
+          i.category === 'Infrastructure' || i.category === 'Network'
+        ).length,
+        color: '#06b6d4', // cyan
+      },
+      Product: {
+        incidentCount: issues.filter(i => i.issueType === 'bug' || i.issueType === 'incident').length,
+        signalCount: issues.filter(i => i.issueType === 'bug' || i.issueType === 'incident').length,
+        color: '#8b5cf6', // purple
+      },
+      Checkout: {
+        incidentCount: incidents.filter(i =>
+          i.category === 'Application' &&
+          incidents.filter(inc => inc.category === 'Application').indexOf(i) < incidents.filter(inc => inc.category === 'Application').length / 2
+        ).length,
+        signalCount: incidents.filter(i =>
+          i.category === 'Application'
+        ).length,
+        color: '#22c55e', // green
+      },
+      Stock: {
+        incidentCount: issues.filter(i => i.issueType === 'task').length,
+        signalCount: issues.filter(i => i.issueType === 'task' || i.issueType === 'story').length,
+        color: '#f59e0b', // amber
+      },
+    };
+
+    return Object.entries(themes).map(([theme, data]) => ({
+      theme,
+      incidentCount: data.incidentCount,
+      signalCount: data.signalCount,
+      color: data.color,
+    }));
+  }
+
+  private mapJiraPriorityToSeverity(priority?: string): 'critical' | 'high' | 'medium' | 'low' {
+    if (!priority) return 'medium';
+    const p = priority.toLowerCase();
+    if (p === 'critical' || p === 'highest') return 'critical';
+    if (p === 'high') return 'high';
+    if (p === 'low' || p === 'lowest') return 'low';
+    return 'medium';
+  }
+
+  private mapServiceNowPriorityToSeverity(priority?: string): 'critical' | 'high' | 'medium' | 'low' {
+    if (!priority) return 'medium';
+    if (priority.includes('1') || priority.toLowerCase().includes('critical')) return 'critical';
+    if (priority.includes('2') || priority.toLowerCase().includes('high')) return 'high';
+    if (priority.includes('4') || priority.toLowerCase().includes('low')) return 'low';
+    return 'medium';
+  }
+
+  private truncateText(text: string, maxLength: number): string {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength - 3) + '...';
   }
 }
