@@ -87,8 +87,18 @@ export class MetricAggregationService {
       metric.metricKey,
     );
 
+    // Calculate team breakdown
+    const breakdown = this.calculateTeamBreakdown(
+      data,
+      metric.aggregationType,
+      metric.dataType,
+      sourceFields,
+      metric.metricKey,
+    );
+
     return {
       value,
+      breakdown,
       metadata: {
         dataPoints: data.length,
         confidence: this.calculateConfidence(data.length),
@@ -319,6 +329,76 @@ export class MetricAggregationService {
     }
 
     return value;
+  }
+
+  /**
+   * Calculate team breakdown for a metric
+   */
+  private calculateTeamBreakdown(
+    data: any[],
+    aggregationType: string,
+    dataType: string,
+    sourceFields: string[],
+    metricKey?: string,
+  ): any {
+    if (data.length === 0) return null;
+
+    // Group data by team
+    const teamData: Record<string, any[]> = {};
+
+    for (const item of data) {
+      // Extract team from various sources
+      let team = 'Unknown';
+
+      // From Jira
+      if (item.assigneeDisplayName) {
+        team = 'Engineering'; // Could be extracted from Jira project or assignee
+      }
+      // From ServiceNow
+      else if (item.assignmentGroupName) {
+        team = item.assignmentGroupName;
+      }
+      // From Slack
+      else if (item.channelName) {
+        // Map common channel names to teams
+        if (item.channelName.includes('engineering') || item.channelName.includes('dev')) {
+          team = 'Engineering';
+        } else if (item.channelName.includes('product')) {
+          team = 'Product';
+        } else if (item.channelName.includes('support')) {
+          team = 'Support';
+        } else {
+          team = 'Engineering'; // Default
+        }
+      }
+      // From Teams
+      else if (item.channelId) {
+        team = 'Product'; // Default for Teams messages
+      }
+
+      if (!teamData[team]) {
+        teamData[team] = [];
+      }
+      teamData[team].push(item);
+    }
+
+    // Calculate metric value for each team
+    const byTeam: Record<string, number> = {};
+
+    for (const [team, items] of Object.entries(teamData)) {
+      byTeam[team] = this.applyAggregation(
+        items,
+        aggregationType,
+        dataType,
+        sourceFields,
+        metricKey,
+      );
+    }
+
+    return {
+      byTeam,
+      byProject: {}, // Could be calculated similarly if needed
+    };
   }
 
   /**
