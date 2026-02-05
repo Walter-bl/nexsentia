@@ -7,8 +7,6 @@ import { seedJiraData } from './jira.seeder';
 import { seedSlackData } from './slack.seeder';
 import { seedTeamsData } from './teams.seeder';
 import { seedServiceNowData } from './servicenow.seeder';
-import { seedKpiData } from './kpi.seeder';
-import { seedTimelineData } from './timeline.seeder';
 
 // Load environment variables
 config();
@@ -36,8 +34,6 @@ async function runSeeders() {
     await seedSlackData(dataSource, demoTenantId);
     await seedTeamsData(dataSource, demoTenantId);
     await seedServiceNowData(dataSource, demoTenantId);
-    await seedKpiData(dataSource, demoTenantId);
-    await seedTimelineData(dataSource, demoTenantId);
 
     console.log('\n========================================');
     console.log('Database seeding completed successfully!');

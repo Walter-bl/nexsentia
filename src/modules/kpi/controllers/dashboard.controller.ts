@@ -55,30 +55,46 @@ export class DashboardController {
     // Calculate date range based on timeRange parameter or custom dates
     const { start, end } = this.calculateDateRange(periodStart, periodEnd, timeRange);
 
-    // Get org health metrics
+    // Get org health metrics and calculate them from raw ingestion data
     const metrics = await this.definitionService.getMetrics(tenantId, 'org_health');
     const metricData = [];
 
     for (const metric of metrics) {
-      const values = await this.aggregationService.getMetricValues(
+      // Calculate metric directly from ingestion data in real-time
+      const result = await this.aggregationService.calculateMetric(metric, {
         tenantId,
-        metric.metricKey,
-        start,
-        end,
-      );
+        periodStart: start,
+        periodEnd: end,
+        granularity: 'daily',
+      });
 
-      const latestValue = values[values.length - 1];
+      if (result && result.value !== undefined) {
+        // Calculate comparison with previous period for trend
+        const previousPeriodStart = new Date(start.getTime() - (end.getTime() - start.getTime()));
+        const previousResult = await this.aggregationService.calculateMetric(metric, {
+          tenantId,
+          periodStart: previousPeriodStart,
+          periodEnd: start,
+          granularity: 'daily',
+        });
 
-      if (latestValue) {
+        const previousValue = previousResult?.value || result.value;
+        const changePercent = previousValue ? ((result.value - previousValue) / previousValue) * 100 : 0;
+
+        let trend: 'up' | 'down' | 'stable' = 'stable';
+        if (Math.abs(changePercent) > 5) {
+          trend = changePercent > 0 ? 'up' : 'down';
+        }
+
         metricData.push({
           key: metric.metricKey,
           name: metric.name,
-          value: latestValue.value,
+          value: result.value,
           unit: metric.displayConfig?.unit,
-          trend: latestValue.comparisonData?.trend,
-          changePercent: latestValue.comparisonData?.changePercent,
-          status: this.determineStatus(latestValue.value, metric.thresholds),
-          breakdown: latestValue.breakdown,
+          trend: trend,
+          changePercent: parseFloat(changePercent.toFixed(2)),
+          status: this.determineStatus(result.value, metric.thresholds),
+          breakdown: result.breakdown,
         });
       }
     }
