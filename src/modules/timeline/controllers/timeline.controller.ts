@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   ParseIntPipe,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
@@ -83,14 +84,25 @@ export class TimelineController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a single timeline event' })
+  @ApiOperation({ summary: 'Get a single timeline event or signal' })
   @ApiResponse({ status: 200, description: 'Timeline event retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Timeline event not found' })
   async getEvent(
     @CurrentTenant() tenantId: number,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
   ) {
-    return await this.timelineService.getEvent(tenantId, id);
+    // Check if ID is a signal ID format (source_id)
+    if (id.includes('_')) {
+      return await this.timelineGeneratorService.getSignalTimeline(tenantId, id);
+    }
+
+    // Otherwise, treat as numeric timeline event ID
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) {
+      throw new NotFoundException(`Invalid ID format: ${id}`);
+    }
+
+    return await this.timelineService.getEvent(tenantId, numericId);
   }
 
   @Post()

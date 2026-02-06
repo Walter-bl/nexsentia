@@ -3,7 +3,9 @@ import {
   Get,
   Post,
   Query,
+  Param,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { CurrentTenant } from '../../../common/decorators/current-tenant.decorator';
@@ -146,6 +148,169 @@ export class DashboardController {
       metrics: metricData,
       period: { start, end },
     };
+  }
+
+  @Get('signals/:signalId')
+  async getSignalDetails(
+    @CurrentTenant() tenantId: number,
+    @Param('signalId') signalId: string,
+  ) {
+    // Parse signal ID format: {source}_{id}
+    const parts = signalId.split('_');
+    if (parts.length !== 2) {
+      throw new NotFoundException(`Invalid signal ID format: ${signalId}`);
+    }
+
+    const [source, id] = parts;
+    const numericId = parseInt(id, 10);
+
+    if (isNaN(numericId)) {
+      throw new NotFoundException(`Invalid signal ID: ${signalId}`);
+    }
+
+    let signal: any = null;
+
+    switch (source) {
+      case 'jira':
+        const jiraIssue = await this.jiraIssueRepository.findOne({
+          where: { tenantId, id: numericId },
+          relations: ['project'],
+        });
+
+        if (!jiraIssue) {
+          throw new NotFoundException(`Jira issue not found: ${signalId}`);
+        }
+
+        signal = {
+          id: signalId,
+          type: jiraIssue.issueType === 'incident' ? 'incident' : 'task',
+          title: jiraIssue.summary,
+          description: jiraIssue.description || '',
+          source: 'jira',
+          severity: this.mapJiraPriorityToSeverity(jiraIssue.priority),
+          timestamp: jiraIssue.jiraCreatedAt,
+          team: 'Engineering',
+          details: {
+            issueKey: jiraIssue.jiraIssueKey,
+            issueType: jiraIssue.issueType,
+            status: jiraIssue.status,
+            priority: jiraIssue.priority,
+            assignee: jiraIssue.assigneeDisplayName,
+            reporter: jiraIssue.reporterDisplayName,
+            projectKey: jiraIssue.project?.jiraProjectKey,
+            projectName: jiraIssue.project?.name,
+            labels: jiraIssue.labels,
+            createdAt: jiraIssue.jiraCreatedAt,
+            updatedAt: jiraIssue.jiraUpdatedAt,
+            resolvedAt: jiraIssue.resolvedAt,
+            resolution: jiraIssue.resolution,
+          },
+        };
+        break;
+
+      case 'servicenow':
+        const incident = await this.serviceNowIncidentRepository.findOne({
+          where: { tenantId, id: numericId },
+        });
+
+        if (!incident) {
+          throw new NotFoundException(`ServiceNow incident not found: ${signalId}`);
+        }
+
+        signal = {
+          id: signalId,
+          type: 'incident',
+          title: incident.shortDescription,
+          description: incident.description || '',
+          source: 'servicenow',
+          severity: this.mapServiceNowPriorityToSeverity(incident.priority),
+          timestamp: incident.openedAt,
+          team: incident.assignmentGroupName || 'Unknown',
+          details: {
+            number: incident.number,
+            state: incident.state,
+            priority: incident.priority,
+            urgency: incident.urgency,
+            impact: incident.impact,
+            category: incident.category,
+            subcategory: incident.subcategory,
+            assignedTo: incident.assignedToName,
+            assignmentGroup: incident.assignmentGroupName,
+            openedAt: incident.openedAt,
+            resolvedAt: incident.resolvedAt,
+            closedAt: incident.closedAt,
+            closeNotes: incident.closeNotes,
+          },
+        };
+        break;
+
+      case 'slack':
+        const slackMessage = await this.slackMessageRepository.findOne({
+          where: { tenantId, id: numericId },
+          relations: ['channel'],
+        });
+
+        if (!slackMessage) {
+          throw new NotFoundException(`Slack message not found: ${signalId}`);
+        }
+
+        signal = {
+          id: signalId,
+          type: 'communication',
+          title: this.truncateText(slackMessage.text || '', 80),
+          description: slackMessage.text || '',
+          source: 'slack',
+          timestamp: slackMessage.slackCreatedAt,
+          team: this.mapChannelToTeam(slackMessage.channel?.name),
+          details: {
+            channelName: slackMessage.channel?.name,
+            channelId: slackMessage.slackChannelId,
+            userId: slackMessage.slackUserId,
+            messageType: slackMessage.type,
+            subtype: slackMessage.subtype,
+            threadTs: slackMessage.slackThreadTs,
+            replyCount: slackMessage.replyCount,
+            createdAt: slackMessage.slackCreatedAt,
+          },
+        };
+        break;
+
+      case 'teams':
+        const teamsMessage = await this.teamsMessageRepository.findOne({
+          where: { tenantId, id: numericId },
+          relations: ['user', 'channel'],
+        });
+
+        if (!teamsMessage) {
+          throw new NotFoundException(`Teams message not found: ${signalId}`);
+        }
+
+        signal = {
+          id: signalId,
+          type: 'communication',
+          title: this.truncateText(teamsMessage.content || '', 80),
+          description: teamsMessage.content || '',
+          source: 'teams',
+          timestamp: teamsMessage.createdDateTime,
+          team: 'Product',
+          details: {
+            channelId: teamsMessage.teamsChannelId,
+            teamId: teamsMessage.teamId,
+            from: teamsMessage.user?.displayName,
+            fromUserId: teamsMessage.teamsUserId,
+            messageType: teamsMessage.messageType,
+            replyToId: teamsMessage.replyToId,
+            createdAt: teamsMessage.createdDateTime,
+            lastModified: teamsMessage.lastModifiedDateTime,
+          },
+        };
+        break;
+
+      default:
+        throw new NotFoundException(`Unknown signal source: ${source}`);
+    }
+
+    return signal;
   }
 
   @Get('org-health')
@@ -492,68 +657,104 @@ export class DashboardController {
     return 'stable';
   }
 
-  private getTeamSignals(metrics: any[]): Array<{
-    team: string;
-    metrics: Array<{
+  private getTeamSignals(metrics: any[]): {
+    byMetric: Array<{
       key: string;
       name: string;
-      value: unknown;
-      status: 'excellent' | 'good' | 'warning' | 'critical';
+      unit?: string;
+      teams: Record<string, number>;
     }>;
-    overallScore: number;
-  }> {
-    const signals: Array<{
+    byTeam: Array<{
       team: string;
       metrics: Array<{
         key: string;
         name: string;
-        value: unknown;
+        value: number;
+        unit?: string;
+        status: 'excellent' | 'good' | 'warning' | 'critical';
+      }>;
+      overallScore: number;
+    }>;
+  } {
+    const byMetric: Array<{
+      key: string;
+      name: string;
+      unit?: string;
+      teams: Record<string, number>;
+    }> = [];
+
+    const byTeam: Array<{
+      team: string;
+      metrics: Array<{
+        key: string;
+        name: string;
+        value: number;
+        unit?: string;
         status: 'excellent' | 'good' | 'warning' | 'critical';
       }>;
       overallScore: number;
     }> = [];
 
+    // Group by metric key (for radar charts)
+    for (const metric of metrics) {
+      if (metric.breakdown?.byTeam) {
+        byMetric.push({
+          key: metric.key,
+          name: metric.name,
+          unit: metric.unit,
+          teams: metric.breakdown.byTeam,
+        });
+      }
+    }
+
+    // Group by team (for team-specific views)
+    const teamMap: Map<string, Array<{
+      key: string;
+      name: string;
+      value: number;
+      unit?: string;
+      status: 'excellent' | 'good' | 'warning' | 'critical';
+    }>> = new Map();
+
     for (const metric of metrics) {
       if (metric.breakdown?.byTeam) {
         for (const [team, value] of Object.entries(metric.breakdown.byTeam)) {
-          const existingSignal = signals.find(s => s.team === team);
-
-          if (existingSignal) {
-            existingSignal.metrics.push({
-              key: metric.key,
-              name: metric.name,
-              value: value,
-              status: this.determineStatus(value as number, undefined),
-            });
-          } else {
-            signals.push({
-              team: team,
-              metrics: [{
-                key: metric.key,
-                name: metric.name,
-                value: value,
-                status: this.determineStatus(value as number, undefined),
-              }],
-              overallScore: 0,
-            });
+          if (!teamMap.has(team)) {
+            teamMap.set(team, []);
           }
+          teamMap.get(team)!.push({
+            key: metric.key,
+            name: metric.name,
+            value: value as number,
+            unit: metric.unit,
+            status: this.determineStatus(value as number, undefined),
+          });
         }
       }
     }
 
-    // Calculate overall team score
-    for (const signal of signals) {
-      const statusScores = signal.metrics.map(m => {
+    // Calculate overall score for each team
+    for (const [team, teamMetrics] of teamMap.entries()) {
+      const statusScores = teamMetrics.map(m => {
         const status = m.status;
         return status === 'excellent' ? 100 : status === 'good' ? 75 : status === 'warning' ? 50 : 25;
       });
 
-      signal.overallScore = statusScores.length > 0
+      const overallScore = statusScores.length > 0
         ? Math.round(statusScores.reduce((a, b) => a + b, 0) / statusScores.length)
         : 0;
+
+      byTeam.push({
+        team,
+        metrics: teamMetrics,
+        overallScore,
+      });
     }
 
-    return signals;
+    return {
+      byMetric,
+      byTeam,
+    };
   }
 
   private async getRecentSignals(tenantId: number, endDate: Date): Promise<Array<{
@@ -794,5 +995,19 @@ export class DashboardController {
   private truncateText(text: string, maxLength: number): string {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength - 3) + '...';
+  }
+
+  private mapChannelToTeam(channelName: string): string {
+    if (!channelName) return 'Unknown';
+
+    const name = channelName.toLowerCase();
+    if (name.includes('engineering') || name.includes('dev')) {
+      return 'Engineering';
+    } else if (name.includes('product')) {
+      return 'Product';
+    } else if (name.includes('support')) {
+      return 'Support';
+    }
+    return 'Engineering'; // Default
   }
 }

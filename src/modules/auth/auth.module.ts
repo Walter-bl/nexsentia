@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
@@ -15,6 +16,10 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { APP_GUARD } from '@nestjs/core';
+import { JiraConnection } from '../jira/entities/jira-connection.entity';
+import { ServiceNowConnection } from '../servicenow/entities/servicenow-connection.entity';
+import { SlackConnection } from '../slack/entities/slack-connection.entity';
+import { TeamsConnection } from '../teams/entities/teams-connection.entity';
 
 @Module({
   imports: [
@@ -29,6 +34,12 @@ import { APP_GUARD } from '@nestjs/core';
       }),
       inject: [ConfigService],
     }),
+    TypeOrmModule.forFeature([
+      JiraConnection,
+      ServiceNowConnection,
+      SlackConnection,
+      TeamsConnection,
+    ]),
     UsersModule,
     TenantsModule,
     RolesModule,

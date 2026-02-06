@@ -1,6 +1,8 @@
 import { Injectable, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { TenantsService } from '../tenants/tenants.service';
 import { RolesService } from '../roles/roles.service';
@@ -14,6 +16,10 @@ import { AuthResponseDto, UserResponseDto, AuthTokensDto } from './dto/auth-resp
 import { User } from '../users/entities/user.entity';
 import { JwtPayload, JwtRefreshPayload } from '../../common/interfaces';
 import { UserRole } from '../../common/enums';
+import { JiraConnection } from '../jira/entities/jira-connection.entity';
+import { ServiceNowConnection } from '../servicenow/entities/servicenow-connection.entity';
+import { SlackConnection } from '../slack/entities/slack-connection.entity';
+import { TeamsConnection } from '../teams/entities/teams-connection.entity';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +31,14 @@ export class AuthService {
     private readonly s3Service: S3Service,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    @InjectRepository(JiraConnection)
+    private readonly jiraConnectionRepository: Repository<JiraConnection>,
+    @InjectRepository(ServiceNowConnection)
+    private readonly serviceNowConnectionRepository: Repository<ServiceNowConnection>,
+    @InjectRepository(SlackConnection)
+    private readonly slackConnectionRepository: Repository<SlackConnection>,
+    @InjectRepository(TeamsConnection)
+    private readonly teamsConnectionRepository: Repository<TeamsConnection>,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
@@ -258,5 +272,34 @@ export class AuthService {
     await this.emailService.sendPasswordChangedEmail(user.email, user.firstName);
 
     return { message: 'Password has been reset successfully' };
+  }
+
+  async getIntegrationConnections(tenantId: number): Promise<{
+    jiraConnected: boolean;
+    serviceNowConnected: boolean;
+    slackConnected: boolean;
+    teamsConnected: boolean;
+  }> {
+    const [jiraConnection, serviceNowConnection, slackConnection, teamsConnection] = await Promise.all([
+      this.jiraConnectionRepository.findOne({
+        where: { tenantId, isActive: true },
+      }),
+      this.serviceNowConnectionRepository.findOne({
+        where: { tenantId, isActive: true },
+      }),
+      this.slackConnectionRepository.findOne({
+        where: { tenantId, isActive: true },
+      }),
+      this.teamsConnectionRepository.findOne({
+        where: { tenantId, isActive: true },
+      }),
+    ]);
+
+    return {
+      jiraConnected: !!jiraConnection,
+      serviceNowConnected: !!serviceNowConnection,
+      slackConnected: !!slackConnection,
+      teamsConnected: !!teamsConnection,
+    };
   }
 }

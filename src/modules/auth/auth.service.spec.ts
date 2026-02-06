@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { TenantsService } from '../tenants/tenants.service';
@@ -9,6 +10,10 @@ import { RolesService } from '../roles/roles.service';
 import { EmailService } from '../email/email.service';
 import { S3Service } from '../storage/services/s3.service';
 import { UserRole } from '../../common/enums';
+import { JiraConnection } from '../jira/entities/jira-connection.entity';
+import { ServiceNowConnection } from '../servicenow/entities/servicenow-connection.entity';
+import { SlackConnection } from '../slack/entities/slack-connection.entity';
+import { TeamsConnection } from '../teams/entities/teams-connection.entity';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -120,6 +125,30 @@ describe('AuthService', () => {
               };
               return config[key];
             }),
+          },
+        },
+        {
+          provide: getRepositoryToken(JiraConnection),
+          useValue: {
+            findOne: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(ServiceNowConnection),
+          useValue: {
+            findOne: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(SlackConnection),
+          useValue: {
+            findOne: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(TeamsConnection),
+          useValue: {
+            findOne: jest.fn(),
           },
         },
       ],

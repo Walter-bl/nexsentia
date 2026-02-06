@@ -76,7 +76,12 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Current user profile' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getProfile(@CurrentUser() user: any) {
-    return user;
+    const integrations = await this.authService.getIntegrationConnections(user.tenantId);
+
+    return {
+      ...user,
+      integrations,
+    };
   }
 
   @Post('logout')

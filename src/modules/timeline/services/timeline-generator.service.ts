@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, MoreThan, LessThan } from 'typeorm';
 import { JiraIssue } from '../../jira/entities/jira-issue.entity';
@@ -346,6 +346,175 @@ export class TimelineGeneratorService {
     }
 
     return null;
+  }
+
+  /**
+   * Get timeline for a specific signal by its ID
+   */
+  async getSignalTimeline(tenantId: number, signalId: string): Promise<GeneratedTimelineEvent> {
+    // Parse signal ID format: {source}_{id}
+    const parts = signalId.split('_');
+    if (parts.length !== 2) {
+      throw new NotFoundException(`Invalid signal ID format: ${signalId}`);
+    }
+
+    const [source, id] = parts;
+    const numericId = parseInt(id, 10);
+
+    if (isNaN(numericId)) {
+      throw new NotFoundException(`Invalid signal ID: ${signalId}`);
+    }
+
+    let event: GeneratedTimelineEvent;
+
+    switch (source) {
+      case 'jira':
+        const jiraIssue = await this.jiraIssueRepository.findOne({
+          where: { tenantId, id: numericId },
+          relations: ['project'],
+        });
+
+        if (!jiraIssue) {
+          throw new NotFoundException(`Jira issue not found: ${signalId}`);
+        }
+
+        event = {
+          id: signalId,
+          title: jiraIssue.summary || 'Untitled Issue',
+          description: jiraIssue.description || '',
+          eventDate: jiraIssue.jiraCreatedAt ?? new Date(),
+          impactLevel: this.mapJiraPriorityToImpact(jiraIssue.priority || 'medium'),
+          category: jiraIssue.issueType || 'Task',
+          sourceType: 'jira',
+          sourceId: jiraIssue.jiraIssueKey,
+          isResolved: jiraIssue.status === 'Done' || jiraIssue.status === 'Closed',
+          metadata: {
+            issueKey: jiraIssue.jiraIssueKey,
+            status: jiraIssue.status,
+            priority: jiraIssue.priority,
+            assignee: jiraIssue.assigneeDisplayName,
+            reporter: jiraIssue.reporterDisplayName,
+            projectKey: jiraIssue.project?.jiraProjectKey,
+            projectName: jiraIssue.project?.name,
+            labels: jiraIssue.labels,
+            updatedAt: jiraIssue.jiraUpdatedAt,
+            resolvedAt: jiraIssue.resolvedAt,
+          },
+          affectedSystems: [jiraIssue.project?.name || 'Unknown Project'],
+          detectionConfidence: 100,
+        };
+        break;
+
+      case 'servicenow':
+        const incident = await this.serviceNowIncidentRepository.findOne({
+          where: { tenantId, id: numericId },
+        });
+
+        if (!incident) {
+          throw new NotFoundException(`ServiceNow incident not found: ${signalId}`);
+        }
+
+        event = {
+          id: signalId,
+          title: incident.shortDescription || 'Untitled Incident',
+          description: incident.description || '',
+          eventDate: incident.openedAt ?? new Date(),
+          impactLevel: this.mapServiceNowPriorityToImpact(incident.priority || '3'),
+          category: 'Incident',
+          sourceType: 'servicenow',
+          sourceId: incident.number,
+          isResolved: incident.state === 'Resolved' || incident.state === 'Closed',
+          metadata: {
+            number: incident.number,
+            state: incident.state,
+            priority: incident.priority,
+            urgency: incident.urgency,
+            impact: incident.impact,
+            category: incident.category,
+            subcategory: incident.subcategory,
+            assignedTo: incident.assignedToName,
+            assignmentGroup: incident.assignmentGroupName,
+            resolvedAt: incident.resolvedAt,
+            closedAt: incident.closedAt,
+          },
+          affectedSystems: [incident.category || 'Unknown System'],
+          detectionConfidence: 100,
+        };
+        break;
+
+      case 'slack':
+        const slackMessage = await this.slackMessageRepository.findOne({
+          where: { tenantId, id: numericId },
+          relations: ['channel'],
+        });
+
+        if (!slackMessage) {
+          throw new NotFoundException(`Slack message not found: ${signalId}`);
+        }
+
+        event = {
+          id: signalId,
+          title: slackMessage.text?.substring(0, 100) || 'Slack Message',
+          description: slackMessage.text || '',
+          eventDate: slackMessage.slackCreatedAt,
+          impactLevel: 'low',
+          category: 'Communication',
+          sourceType: 'slack',
+          sourceId: slackMessage.slackMessageTs,
+          isResolved: true,
+          metadata: {
+            channelName: slackMessage.channel?.name,
+            channelId: slackMessage.slackChannelId,
+            userId: slackMessage.slackUserId,
+            type: slackMessage.type,
+            subtype: slackMessage.subtype,
+            threadTs: slackMessage.slackThreadTs,
+            replyCount: slackMessage.replyCount,
+          },
+          affectedSystems: [slackMessage.channel?.name || 'Unknown Channel'],
+          detectionConfidence: 85,
+        };
+        break;
+
+      case 'teams':
+        const teamsMessage = await this.teamsMessageRepository.findOne({
+          where: { tenantId, id: numericId },
+          relations: ['user', 'channel'],
+        });
+
+        if (!teamsMessage) {
+          throw new NotFoundException(`Teams message not found: ${signalId}`);
+        }
+
+        event = {
+          id: signalId,
+          title: teamsMessage.content?.substring(0, 100) || 'Teams Message',
+          description: teamsMessage.content || '',
+          eventDate: teamsMessage.createdDateTime,
+          impactLevel: 'low',
+          category: 'Communication',
+          sourceType: 'teams',
+          sourceId: teamsMessage.messageId,
+          isResolved: true,
+          metadata: {
+            channelId: teamsMessage.teamsChannelId,
+            teamId: teamsMessage.teamId,
+            from: teamsMessage.user?.displayName,
+            fromUserId: teamsMessage.teamsUserId,
+            messageType: teamsMessage.messageType,
+            replyToId: teamsMessage.replyToId,
+            importance: teamsMessage.importance,
+          },
+          affectedSystems: ['Microsoft Teams'],
+          detectionConfidence: 85,
+        };
+        break;
+
+      default:
+        throw new NotFoundException(`Unknown signal source: ${source}`);
+    }
+
+    return event;
   }
 
   /**
