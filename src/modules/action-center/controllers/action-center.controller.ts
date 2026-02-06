@@ -24,22 +24,38 @@ export class ActionCenterController {
     @Query('priority') priority?: 'critical' | 'high' | 'medium' | 'low',
     @Query('search') search?: string,
   ) {
-    if (search) {
-      const actions = await this.actionGeneratorService.searchActions(tenantId, search);
-      return { actions, total: actions.length };
-    }
+    console.log(`[ActionCenterController] getActions called with tenantId: ${tenantId}, status: ${status}, priority: ${priority}, search: ${search}`);
 
-    if (status) {
-      const actions = await this.actionGeneratorService.getActionsByStatus(tenantId, status);
-      return { actions, total: actions.length };
-    }
+    try {
+      if (search) {
+        console.log(`[ActionCenterController] Searching actions with term: ${search}`);
+        const actions = await this.actionGeneratorService.searchActions(tenantId, search);
+        console.log(`[ActionCenterController] Search returned ${actions.length} actions`);
+        return { actions, total: actions.length };
+      }
 
-    if (priority) {
-      const actions = await this.actionGeneratorService.getActionsByPriority(tenantId, priority);
-      return { actions, total: actions.length };
-    }
+      if (status) {
+        console.log(`[ActionCenterController] Filtering actions by status: ${status}`);
+        const actions = await this.actionGeneratorService.getActionsByStatus(tenantId, status);
+        console.log(`[ActionCenterController] Status filter returned ${actions.length} actions`);
+        return { actions, total: actions.length };
+      }
 
-    return await this.actionGeneratorService.generateActions(tenantId);
+      if (priority) {
+        console.log(`[ActionCenterController] Filtering actions by priority: ${priority}`);
+        const actions = await this.actionGeneratorService.getActionsByPriority(tenantId, priority);
+        console.log(`[ActionCenterController] Priority filter returned ${actions.length} actions`);
+        return { actions, total: actions.length };
+      }
+
+      console.log('[ActionCenterController] Generating all actions...');
+      const result = await this.actionGeneratorService.generateActions(tenantId);
+      console.log(`[ActionCenterController] Generated ${result.actions.length} total actions`);
+      return result;
+    } catch (error) {
+      console.error('[ActionCenterController] Error in getActions:', error);
+      throw error;
+    }
   }
 
   /**

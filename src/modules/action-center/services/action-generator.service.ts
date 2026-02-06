@@ -49,19 +49,49 @@ export class ActionGeneratorService {
     };
     byStatus: { open: number; in_progress: number; done: number };
   }> {
+    console.log(`[ActionGenerator] Starting generateActions for tenant ${tenantId}`);
     this.logger.log(`Generating actions for tenant ${tenantId}`);
 
-    const [
-      jiraActions,
-      serviceNowActions,
-      timelineActions,
-      kpiActions,
-    ] = await Promise.all([
-      this.generateJiraActions(tenantId),
-      this.generateServiceNowActions(tenantId),
-      this.generateTimelineActions(tenantId),
-      this.generateKpiActions(tenantId),
-    ]);
+    let jiraActions: GeneratedAction[] = [];
+    let serviceNowActions: GeneratedAction[] = [];
+    let timelineActions: GeneratedAction[] = [];
+    let kpiActions: GeneratedAction[] = [];
+
+    try {
+      console.log('[ActionGenerator] Calling generateJiraActions...');
+      jiraActions = await this.generateJiraActions(tenantId);
+      console.log(`[ActionGenerator] Generated ${jiraActions.length} Jira actions`);
+    } catch (error) {
+      console.error('[ActionGenerator] Error in generateJiraActions:', error);
+      this.logger.error(`Error generating Jira actions: ${error.message}`, error.stack);
+    }
+
+    try {
+      console.log('[ActionGenerator] Calling generateServiceNowActions...');
+      serviceNowActions = await this.generateServiceNowActions(tenantId);
+      console.log(`[ActionGenerator] Generated ${serviceNowActions.length} ServiceNow actions`);
+    } catch (error) {
+      console.error('[ActionGenerator] Error in generateServiceNowActions:', error);
+      this.logger.error(`Error generating ServiceNow actions: ${error.message}`, error.stack);
+    }
+
+    try {
+      console.log('[ActionGenerator] Calling generateTimelineActions...');
+      timelineActions = await this.generateTimelineActions(tenantId);
+      console.log(`[ActionGenerator] Generated ${timelineActions.length} Timeline actions`);
+    } catch (error) {
+      console.error('[ActionGenerator] Error in generateTimelineActions:', error);
+      this.logger.error(`Error generating Timeline actions: ${error.message}`, error.stack);
+    }
+
+    try {
+      console.log('[ActionGenerator] Calling generateKpiActions...');
+      kpiActions = await this.generateKpiActions(tenantId);
+      console.log(`[ActionGenerator] Generated ${kpiActions.length} KPI actions`);
+    } catch (error) {
+      console.error('[ActionGenerator] Error in generateKpiActions:', error);
+      this.logger.error(`Error generating KPI actions: ${error.message}`, error.stack);
+    }
 
     const allActions = [
       ...jiraActions,
@@ -69,6 +99,8 @@ export class ActionGeneratorService {
       ...timelineActions,
       ...kpiActions,
     ];
+
+    console.log(`[ActionGenerator] Total actions before sorting: ${allActions.length}`);
 
     // Sort by priority and date
     allActions.sort((a, b) => {
@@ -85,12 +117,16 @@ export class ActionGeneratorService {
       done: allActions.filter(a => a.status === 'done').length,
     };
 
+    console.log('[ActionGenerator] Status breakdown:', byStatus);
+
     const stats = {
       totalSources: 6,
       totalPiiStored: 305808,
       activeConnections: 5,
       lastUpdate: allActions.length > 0 ? allActions[0].createdAt : null,
     };
+
+    console.log('[ActionGenerator] generateActions completed successfully');
 
     return {
       actions: allActions,
@@ -103,6 +139,7 @@ export class ActionGeneratorService {
    * Generate actions from Jira issues
    */
   private async generateJiraActions(tenantId: number): Promise<GeneratedAction[]> {
+    console.log('[ActionGenerator] generateJiraActions - querying Jira issues...');
     const criticalIssues = await this.jiraIssueRepository.find({
       where: {
         tenantId,
@@ -112,6 +149,8 @@ export class ActionGeneratorService {
       take: 5,
       order: { jiraCreatedAt: 'DESC' },
     });
+
+    console.log(`[ActionGenerator] generateJiraActions - found ${criticalIssues.length} critical issues`);
 
     return criticalIssues.map(issue => ({
       id: `jira_${issue.id}`,
@@ -142,6 +181,7 @@ export class ActionGeneratorService {
    * Generate actions from ServiceNow incidents
    */
   private async generateServiceNowActions(tenantId: number): Promise<GeneratedAction[]> {
+    console.log('[ActionGenerator] generateServiceNowActions - querying ServiceNow incidents...');
     const criticalIncidents = await this.serviceNowIncidentRepository.find({
       where: {
         tenantId,
@@ -151,6 +191,8 @@ export class ActionGeneratorService {
       take: 5,
       order: { sysCreatedOn: 'DESC' },
     });
+
+    console.log(`[ActionGenerator] generateServiceNowActions - found ${criticalIncidents.length} critical incidents`);
 
     return criticalIncidents.map(incident => ({
       id: `servicenow_${incident.id}`,
@@ -181,6 +223,7 @@ export class ActionGeneratorService {
    * Generate actions from timeline events
    */
   private async generateTimelineActions(tenantId: number): Promise<GeneratedAction[]> {
+    console.log('[ActionGenerator] generateTimelineActions - querying timeline events...');
     const unresolvedHighImpact = await this.timelineEventRepository.find({
       where: {
         tenantId,
@@ -191,6 +234,8 @@ export class ActionGeneratorService {
       take: 5,
       order: { eventDate: 'DESC' },
     });
+
+    console.log(`[ActionGenerator] generateTimelineActions - found ${unresolvedHighImpact.length} high impact events`);
 
     return unresolvedHighImpact.map(event => ({
       id: `timeline_${event.id}`,
