@@ -662,7 +662,8 @@ export class DashboardController {
       key: string;
       name: string;
       unit?: string;
-      teams: Record<string, number>;
+      value: number;
+      status: 'excellent' | 'good' | 'warning' | 'critical';
     }>;
     byTeam: Array<{
       team: string;
@@ -680,7 +681,8 @@ export class DashboardController {
       key: string;
       name: string;
       unit?: string;
-      teams: Record<string, number>;
+      value: number;
+      status: 'excellent' | 'good' | 'warning' | 'critical';
     }> = [];
 
     const byTeam: Array<{
@@ -695,14 +697,21 @@ export class DashboardController {
       overallScore: number;
     }> = [];
 
-    // Group by metric key (for radar charts)
+    // Group by metric key - calculate overall value across all teams
     for (const metric of metrics) {
       if (metric.breakdown?.byTeam) {
+        // Calculate overall value (average across all teams)
+        const teamValues = Object.values(metric.breakdown.byTeam) as number[];
+        const overallValue = teamValues.length > 0
+          ? teamValues.reduce((sum, val) => sum + val, 0) / teamValues.length
+          : metric.value;
+
         byMetric.push({
           key: metric.key,
           name: metric.name,
           unit: metric.unit,
-          teams: metric.breakdown.byTeam,
+          value: parseFloat(overallValue.toFixed(2)),
+          status: metric.status,
         });
       }
     }
