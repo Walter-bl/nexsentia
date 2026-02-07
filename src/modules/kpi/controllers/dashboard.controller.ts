@@ -57,11 +57,15 @@ export class DashboardController {
     @Query('periodEnd') periodEnd?: string,
     @Query('timeRange') timeRange?: '7d' | '14d' | '1m' | '3m' | '6m' | '1y',
   ) {
+    console.log('[OrganizationalPulse] Starting for tenant:', tenantId);
+
     // Calculate date range based on timeRange parameter or custom dates
     const { start, end } = this.calculateDateRange(periodStart, periodEnd, timeRange);
+    console.log('[OrganizationalPulse] Date range:', { start, end });
 
     // Get org health metrics and calculate them from raw ingestion data
     const metrics = await this.definitionService.getMetrics(tenantId, 'org_health');
+    console.log('[OrganizationalPulse] Found metrics:', metrics.length);
     const metricData = [];
 
     for (const metric of metrics) {
@@ -106,10 +110,12 @@ export class DashboardController {
 
     // Calculate overall health score
     const summary = this.calculateSummary(metricData);
+    console.log('[OrganizationalPulse] Summary calculated:', summary);
 
     // Get business impacts for escalations chart
     const impacts = await this.impactService.getImpacts(tenantId, start, end);
     const totalLoss = await this.impactService.getTotalRevenueLoss(tenantId, start, end);
+    console.log('[OrganizationalPulse] Business impacts:', impacts.length, 'Total loss:', totalLoss);
 
     // Group impacts by month for business escalations chart
     const escalationsByMonth = this.groupImpactsByMonth(impacts, start, end);
@@ -121,10 +127,13 @@ export class DashboardController {
     const teamSignals = this.getTeamSignals(metricData);
 
     // Get recent signals (timeline events)
+    console.log('[OrganizationalPulse] Fetching recent signals for tenant:', tenantId);
     const recentSignals = await this.getRecentSignals(tenantId, end);
+    console.log('[OrganizationalPulse] Recent signals found:', recentSignals.length);
 
     // Get signal distribution by theme
     const signalDistribution = await this.getSignalDistributionByTheme(tenantId, start, end);
+    console.log('[OrganizationalPulse] Signal distribution:', signalDistribution.length);
 
     return {
       overallHealth: {
@@ -781,6 +790,8 @@ export class DashboardController {
     category?: string;
     affectedEntities: any;
   }>> {
+    console.log('[getRecentSignals] Querying weak signals for tenant:', tenantId);
+
     // Get recent detected weak signals (last 15)
     const weakSignals = await this.weakSignalRepository.find({
       where: {
@@ -791,6 +802,16 @@ export class DashboardController {
       },
       take: 15,
     });
+
+    console.log('[getRecentSignals] Found weak signals:', weakSignals.length);
+    if (weakSignals.length > 0) {
+      console.log('[getRecentSignals] First signal:', {
+        id: weakSignals[0].id,
+        type: weakSignals[0].signalType,
+        title: weakSignals[0].title,
+        detectedAt: weakSignals[0].detectedAt,
+      });
+    }
 
     return weakSignals.map(signal => ({
       id: signal.id,
