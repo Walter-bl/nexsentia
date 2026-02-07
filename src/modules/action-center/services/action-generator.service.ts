@@ -143,14 +143,12 @@ export class ActionGeneratorService {
     const criticalIssues = await this.jiraIssueRepository.find({
       where: {
         tenantId,
-        priority: 'critical',
-        status: 'in_progress',
       },
-      take: 5,
+      take: 50,
       order: { jiraCreatedAt: 'DESC' },
     });
 
-    console.log(`[ActionGenerator] generateJiraActions - found ${criticalIssues.length} critical issues`);
+    console.log(`[ActionGenerator] generateJiraActions - found ${criticalIssues.length} issues`);
 
     return criticalIssues.map(issue => ({
       id: `jira_${issue.id}`,
@@ -185,36 +183,34 @@ export class ActionGeneratorService {
     const criticalIncidents = await this.serviceNowIncidentRepository.find({
       where: {
         tenantId,
-        priority: '1', // Critical
-        state: 'In Progress',
       },
-      take: 5,
+      take: 50,
       order: { sysCreatedOn: 'DESC' },
     });
 
-    console.log(`[ActionGenerator] generateServiceNowActions - found ${criticalIncidents.length} critical incidents`);
+    console.log(`[ActionGenerator] generateServiceNowActions - found ${criticalIncidents.length} incidents`);
 
     return criticalIncidents.map(incident => ({
       id: `servicenow_${incident.id}`,
-      title: incident.shortDescription || 'Critical Incident',
+      title: incident.shortDescription || 'ServiceNow Incident',
       description: incident.description || '',
-      status: 'in_progress' as const,
-      priority: 'critical' as const,
+      status: this.mapServiceNowState(incident.state || 'New'),
+      priority: this.mapServiceNowPriority(incident.priority || '3'),
       category: 'Operations',
       sourceType: 'servicenow',
       sourceId: incident.number,
       metadata: {
-        detectionPattern: 'recurring_infrastructure_issues',
+        detectionPattern: 'servicenow_incident',
         affectedSystems: [incident.category || 'Infrastructure'],
-        estimatedImpact: 'High availability risk',
+        estimatedImpact: this.getServiceNowImpactDescription(incident.priority || '3'),
       },
       aiAnalysis: {
         detectedIssue: incident.shortDescription,
-        rootCause: 'Infrastructure scaling limits',
-        recommendedSolution: 'Evaluate auto-scaling configurations for affected services during peak traffic periods',
-        estimatedEffort: '4-8 hours',
+        rootCause: 'Infrastructure or service issue',
+        recommendedSolution: 'Investigate and resolve according to incident priority and category',
+        estimatedEffort: this.getEstimatedEffort(incident.priority || '3'),
       },
-      assignedToName: incident.assignedTo || undefined,
+      assignedToName: incident.assignedToName || undefined,
       createdAt: incident.sysCreatedOn || incident.createdAt,
     }));
   }
@@ -227,21 +223,19 @@ export class ActionGeneratorService {
     const unresolvedHighImpact = await this.timelineEventRepository.find({
       where: {
         tenantId,
-        impactLevel: 'high',
-        isResolved: false,
         isActive: true,
       },
-      take: 5,
+      take: 50,
       order: { eventDate: 'DESC' },
     });
 
-    console.log(`[ActionGenerator] generateTimelineActions - found ${unresolvedHighImpact.length} high impact events`);
+    console.log(`[ActionGenerator] generateTimelineActions - found ${unresolvedHighImpact.length} timeline events`);
 
     return unresolvedHighImpact.map(event => ({
       id: `timeline_${event.id}`,
       title: event.title,
       description: event.description || '',
-      status: 'open' as const,
+      status: event.isResolved ? 'done' : 'open',
       priority: this.mapImpactToPriority(event.impactLevel),
       category: event.category,
       sourceType: 'timeline',
@@ -301,6 +295,56 @@ export class ActionGeneratorService {
     if (impact === 'medium') return 'medium';
     if (impact === 'low') return 'low';
     return 'medium';
+  }
+
+  /**
+   * Map ServiceNow state to action status
+   */
+  private mapServiceNowState(state: string): 'open' | 'in_progress' | 'done' {
+    const stateLower = state.toLowerCase();
+    if (stateLower.includes('new') || stateLower.includes('on hold')) {
+      return 'open';
+    }
+    if (stateLower.includes('progress')) {
+      return 'in_progress';
+    }
+    if (stateLower.includes('resolved') || stateLower.includes('closed')) {
+      return 'done';
+    }
+    return 'open';
+  }
+
+  /**
+   * Map ServiceNow priority to action priority
+   */
+  private mapServiceNowPriority(priority: string): 'critical' | 'high' | 'medium' | 'low' {
+    if (priority === '1') return 'critical';
+    if (priority === '2') return 'high';
+    if (priority === '3') return 'medium';
+    if (priority === '4') return 'low';
+    return 'medium';
+  }
+
+  /**
+   * Get ServiceNow impact description
+   */
+  private getServiceNowImpactDescription(priority: string): string {
+    if (priority === '1') return 'Critical - High availability risk';
+    if (priority === '2') return 'High - Service degradation risk';
+    if (priority === '3') return 'Moderate - Limited impact';
+    if (priority === '4') return 'Low - Minimal impact';
+    return 'Moderate impact';
+  }
+
+  /**
+   * Get estimated effort based on priority
+   */
+  private getEstimatedEffort(priority: string): string {
+    if (priority === '1') return '4-8 hours';
+    if (priority === '2') return '2-4 hours';
+    if (priority === '3') return '1-2 hours';
+    if (priority === '4') return '0.5-1 hour';
+    return '2-4 hours';
   }
 
   /**

@@ -120,17 +120,10 @@ export class TimelineGeneratorService {
     const significantIssues = await this.jiraIssueRepository.find({
       where,
       order: { jiraCreatedAt: 'DESC' },
-      take: 50,
+      take: 100,
     });
 
     return significantIssues
-      .filter(issue => {
-        // Only include high-priority or critical issues
-        const priority = (issue.priority || '').toLowerCase();
-        return priority.includes('critical') ||
-               priority.includes('high') ||
-               priority.includes('blocker');
-      })
       .map(issue => ({
         id: `jira_${issue.id}`,
         title: `Issue Created: ${issue.summary}`,
@@ -185,14 +178,10 @@ export class TimelineGeneratorService {
     const incidents = await this.serviceNowIncidentRepository.find({
       where,
       order: { sysCreatedOn: 'DESC' },
-      take: 50,
+      take: 100,
     });
 
     return incidents
-      .filter(incident => {
-        // Only include critical and high priority incidents
-        return incident.priority === '1' || incident.priority === '2';
-      })
       .map(incident => ({
         id: `servicenow_${incident.id}`,
         title: `Incident: ${incident.shortDescription || 'Critical System Issue'}`,

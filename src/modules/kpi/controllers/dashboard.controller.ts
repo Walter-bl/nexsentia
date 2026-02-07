@@ -566,8 +566,8 @@ export class DashboardController {
         start = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
         break;
       default:
-        // Default to last 30 days (1 month)
-        start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        // Default to last 7 days
+        start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     }
 
     return { start, end };
