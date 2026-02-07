@@ -2512,6 +2512,492 @@
 					}
 				}
 			]
+		},
+		{
+			"name": "Weak Signal Detection",
+			"item": [
+				{
+					"name": "Weak Signals",
+					"item": [
+						{
+							"name": "Trigger Detection (Manual)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"daysBack\": 90\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/weak-signals/detect",
+									"host": ["{{base_url}}"],
+									"path": ["weak-signals", "detect"]
+								},
+								"description": "Manually trigger weak signal detection. Analyzes the last N days for patterns, trends, and anomalies. Note: Automated detection runs every 6 hours via cron job."
+							}
+						},
+						{
+							"name": "List Weak Signals",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/weak-signals?page=1&limit=20",
+									"host": ["{{base_url}}"],
+									"path": ["weak-signals"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20"
+										},
+										{
+											"key": "signalType",
+											"value": "pattern_recurring",
+											"disabled": true,
+											"description": "pattern_recurring, trend_acceleration, anomaly_detection, correlation_cluster"
+										},
+										{
+											"key": "severity",
+											"value": "critical",
+											"disabled": true,
+											"description": "critical, high, medium, low"
+										},
+										{
+											"key": "status",
+											"value": "new",
+											"disabled": true,
+											"description": "new, investigating, validated, dismissed, escalated"
+										},
+										{
+											"key": "minConfidence",
+											"value": "70",
+											"disabled": true,
+											"description": "Minimum confidence score (0-100)"
+										}
+									]
+								},
+								"description": "Get all detected weak signals with filtering options"
+							}
+						},
+						{
+							"name": "Get Weak Signal by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/weak-signals/1",
+									"host": ["{{base_url}}"],
+									"path": ["weak-signals", "1"]
+								},
+								"description": "Get detailed information about a specific weak signal including explainability metadata and associated hypotheses.\n\nResponse includes:\n- Full weak signal details (type, severity, confidence, status, etc.)\n- Explainability data (reasoning, patterns, trends)\n- Associated hypotheses array with:\n  - Hypothesis type (correlation, pattern_explanation, prediction)\n  - Hypothesis statement\n  - Confidence score\n  - Status and reasoning\n  - Supporting evidence\n  - Guardrails and validation steps\n  - Predicted impact"
+							}
+						},
+						{
+							"name": "Get Weak Signals Statistics",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/weak-signals/statistics",
+									"host": ["{{base_url}}"],
+									"path": ["weak-signals", "statistics"]
+								},
+								"description": "Get aggregate statistics: total signals, by type, by severity, average confidence"
+							}
+						},
+						{
+							"name": "Update Signal Status",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"investigating\",\n  \"notes\": \"Team assigned to investigate the recurring pattern\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/weak-signals/1/status",
+									"host": ["{{base_url}}"],
+									"path": ["weak-signals", "1", "status"]
+								},
+								"description": "Update the status of a weak signal (new → investigating → validated/dismissed → escalated)"
+							}
+						},
+						{
+							"name": "Get Signals by Type - Pattern Recurring",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/weak-signals?signalType=pattern_recurring",
+									"host": ["{{base_url}}"],
+									"path": ["weak-signals"],
+									"query": [
+										{
+											"key": "signalType",
+											"value": "pattern_recurring"
+										}
+									]
+								},
+								"description": "Get recurring pattern signals (similar issues/incidents repeating over time)"
+							}
+						},
+						{
+							"name": "Get Signals by Type - Trend Acceleration",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/weak-signals?signalType=trend_acceleration",
+									"host": ["{{base_url}}"],
+									"path": ["weak-signals"],
+									"query": [
+										{
+											"key": "signalType",
+											"value": "trend_acceleration"
+										}
+									]
+								},
+								"description": "Get accelerating trend signals (metrics increasing/decreasing faster than normal)"
+							}
+						},
+						{
+							"name": "Get Critical Signals",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/weak-signals?severity=critical&status=new",
+									"host": ["{{base_url}}"],
+									"path": ["weak-signals"],
+									"query": [
+										{
+											"key": "severity",
+											"value": "critical"
+										},
+										{
+											"key": "status",
+											"value": "new"
+										}
+									]
+								},
+								"description": "Get new critical severity signals that require immediate attention"
+							}
+						}
+					]
+				},
+				{
+					"name": "Hypotheses",
+					"item": [
+						{
+							"name": "Generate Hypotheses",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"weakSignalId\": 1\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/hypotheses/generate",
+									"host": ["{{base_url}}"],
+									"path": ["hypotheses", "generate"]
+								},
+								"description": "Generate AI hypotheses for a weak signal. Creates correlation, pattern explanation, and prediction hypotheses with LLM-style reasoning and guardrails."
+							}
+						},
+						{
+							"name": "List Hypotheses",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/hypotheses?page=1&limit=20",
+									"host": ["{{base_url}}"],
+									"path": ["hypotheses"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20"
+										},
+										{
+											"key": "weakSignalId",
+											"value": "1",
+											"disabled": true,
+											"description": "Filter by weak signal"
+										},
+										{
+											"key": "status",
+											"value": "generated",
+											"disabled": true,
+											"description": "generated, investigating, validated, refuted, inconclusive"
+										},
+										{
+											"key": "minConfidence",
+											"value": "60",
+											"disabled": true,
+											"description": "Minimum confidence (0-100)"
+										}
+									]
+								},
+								"description": "Get all generated hypotheses with filtering options"
+							}
+						},
+						{
+							"name": "Get Hypothesis by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/hypotheses/1",
+									"host": ["{{base_url}}"],
+									"path": ["hypotheses", "1"]
+								},
+								"description": "Get detailed hypothesis including reasoning chain, evidence, guardrails, and validation steps"
+							}
+						},
+						{
+							"name": "Update Hypothesis Status",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"validated\",\n  \"validationNotes\": \"Hypothesis confirmed through data analysis\",\n  \"validationResults\": {\n    \"outcome\": \"confirmed\",\n    \"evidence\": [\"Metric analysis shows strong correlation\", \"Timeline events support the hypothesis\"],\n    \"updatedConfidence\": 92,\n    \"notes\": \"Validated by engineering team\"\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/hypotheses/1/status",
+									"host": ["{{base_url}}"],
+									"path": ["hypotheses", "1", "status"]
+								},
+								"description": "Update hypothesis validation status and add validation results"
+							}
+						},
+						{
+							"name": "Get Hypotheses for Signal",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/hypotheses?weakSignalId=1",
+									"host": ["{{base_url}}"],
+									"path": ["hypotheses"],
+									"query": [
+										{
+											"key": "weakSignalId",
+											"value": "1"
+										}
+									]
+								},
+								"description": "Get all hypotheses generated for a specific weak signal"
+							}
+						}
+					]
+				},
+				{
+					"name": "Detection Runs (Automation)",
+					"item": [
+						{
+							"name": "Trigger Detection Run",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/weak-signals/detection-runs/trigger",
+									"host": ["{{base_url}}"],
+									"path": ["weak-signals", "detection-runs", "trigger"]
+								},
+								"description": "Manually trigger a detection run with deduplication. Skips if a run was completed within the last 6 hours (configurable via WEAK_SIGNAL_DETECTION_DEDUPLICATION_HOURS)."
+							}
+						},
+						{
+							"name": "Get Detection Runs History",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/weak-signals/detection-runs?limit=10",
+									"host": ["{{base_url}}"],
+									"path": ["weak-signals", "detection-runs"],
+									"query": [
+										{
+											"key": "limit",
+											"value": "10",
+											"description": "Number of recent runs to retrieve"
+										}
+									]
+								},
+								"description": "Get recent detection run history with status, timing, and results"
+							}
+						},
+						{
+							"name": "Get Detection Run Statistics",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/weak-signals/detection-runs/stats",
+									"host": ["{{base_url}}"],
+									"path": ["weak-signals", "detection-runs", "stats"]
+								},
+								"description": "Get aggregate detection run statistics: total runs, success rate, signals detected, hypotheses generated, average duration, last run time"
+							}
+						}
+					]
+				},
+				{
+					"name": "Examples",
+					"item": [
+						{
+							"name": "Example - Full Detection Flow",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"daysBack\": 90\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/weak-signals/detect",
+									"host": ["{{base_url}}"],
+									"path": ["weak-signals", "detect"]
+								},
+								"description": "Example Flow:\n1. Trigger detection (this endpoint)\n2. Get signals (GET /weak-signals)\n3. Review critical signals (GET /weak-signals?severity=critical)\n4. Generate hypotheses (POST /hypotheses/generate)\n5. Investigate and validate (PATCH /weak-signals/:id/status)"
+							}
+						},
+						{
+							"name": "Example - Monitor Automated Detection",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/weak-signals/detection-runs/stats",
+									"host": ["{{base_url}}"],
+									"path": ["weak-signals", "detection-runs", "stats"]
+								},
+								"description": "Monitor the automated detection system:\n- Check last run time\n- View success rate\n- See total signals detected\n- Track average processing time"
+							}
+						}
+					]
+				}
+			]
 		}
 	]
 }

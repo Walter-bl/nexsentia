@@ -24,6 +24,7 @@ import { PrivacyModule } from './modules/privacy/privacy.module';
 import { KpiModule } from './modules/kpi/kpi.module';
 import { TimelineModule } from './modules/timeline/timeline.module';
 import { ActionCenterModule } from './modules/action-center/action-center.module';
+import { WeakSignalsModule } from './modules/weak-signals/weak-signals.module';
 import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.interceptor';
 
 @Module({
@@ -71,6 +72,7 @@ import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.int
     KpiModule,
     TimelineModule,
     ActionCenterModule,
+    WeakSignalsModule,
   ],
   controllers: [],
   providers: [

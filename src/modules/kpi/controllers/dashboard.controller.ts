@@ -22,6 +22,7 @@ import { JiraIssue } from '../../jira/entities/jira-issue.entity';
 import { ServiceNowIncident } from '../../servicenow/entities/servicenow-incident.entity';
 import { SlackMessage } from '../../slack/entities/slack-message.entity';
 import { TeamsMessage } from '../../teams/entities/teams-message.entity';
+import { WeakSignal } from '../../weak-signals/entities/weak-signal.entity';
 
 @Controller('kpi/dashboard')
 @UseGuards(JwtAuthGuard)
@@ -41,6 +42,8 @@ export class DashboardController {
     private readonly slackMessageRepository: Repository<SlackMessage>,
     @InjectRepository(TeamsMessage)
     private readonly teamsMessageRepository: Repository<TeamsMessage>,
+    @InjectRepository(WeakSignal)
+    private readonly weakSignalRepository: Repository<WeakSignal>,
     private readonly definitionService: MetricDefinitionService,
     private readonly aggregationService: MetricAggregationService,
     private readonly impactService: BusinessImpactService,
@@ -767,115 +770,40 @@ export class DashboardController {
   }
 
   private async getRecentSignals(tenantId: number, endDate: Date): Promise<Array<{
-    id: string;
-    type: 'incident' | 'communication' | 'task';
+    id: number;
+    signalType: string;
     title: string;
     description: string;
-    source: 'jira' | 'servicenow' | 'slack' | 'teams';
-    severity?: 'critical' | 'high' | 'medium' | 'low';
+    severity: 'critical' | 'high' | 'medium' | 'low';
+    confidenceScore: number;
+    status: string;
     timestamp: Date;
-    team?: string;
+    category?: string;
+    affectedEntities: any;
   }>> {
-    const signals: Array<any> = [];
-
-    // Get recent Jira issues (last 10)
-    const jiraIssues = await this.jiraIssueRepository.find({
+    // Get recent detected weak signals (last 15)
+    const weakSignals = await this.weakSignalRepository.find({
       where: {
         tenantId,
       },
       order: {
-        jiraCreatedAt: 'DESC',
+        detectedAt: 'DESC',
       },
-      take: 5,
+      take: 15,
     });
 
-    for (const issue of jiraIssues) {
-      signals.push({
-        id: `jira_${issue.id}`,
-        type: issue.issueType === 'incident' ? 'incident' : 'task',
-        title: issue.summary,
-        description: issue.description || '',
-        source: 'jira',
-        severity: this.mapJiraPriorityToSeverity(issue.priority),
-        timestamp: issue.jiraCreatedAt,
-        team: 'Engineering',
-      });
-    }
-
-    // Get recent ServiceNow incidents (last 10)
-    const incidents = await this.serviceNowIncidentRepository.find({
-      where: {
-        tenantId,
-      },
-      order: {
-        openedAt: 'DESC',
-      },
-      take: 5,
-    });
-
-    for (const incident of incidents) {
-      signals.push({
-        id: `servicenow_${incident.id}`,
-        type: 'incident',
-        title: incident.shortDescription,
-        description: incident.description || '',
-        source: 'servicenow',
-        severity: this.mapServiceNowPriorityToSeverity(incident.priority),
-        timestamp: incident.openedAt,
-        team: incident.assignmentGroupName || 'Support',
-      });
-    }
-
-    // Get recent Slack messages (last 5 with high engagement)
-    const slackMessages = await this.slackMessageRepository.find({
-      where: {
-        tenantId,
-      },
-      order: {
-        slackCreatedAt: 'DESC',
-      },
-      take: 3,
-    });
-
-    for (const message of slackMessages) {
-      signals.push({
-        id: `slack_${message.id}`,
-        type: 'communication',
-        title: this.truncateText(message.text, 80),
-        description: message.text,
-        source: 'slack',
-        timestamp: message.slackCreatedAt,
-        team: 'Engineering',
-      });
-    }
-
-    // Get recent Teams messages (last 5)
-    const teamsMessages = await this.teamsMessageRepository.find({
-      where: {
-        tenantId,
-      },
-      order: {
-        createdDateTime: 'DESC',
-      },
-      take: 2,
-    });
-
-    for (const message of teamsMessages) {
-      signals.push({
-        id: `teams_${message.id}`,
-        type: 'communication',
-        title: this.truncateText(message.content || '', 80),
-        description: message.content || '',
-        source: 'teams',
-        timestamp: message.createdDateTime,
-        team: 'Product',
-      });
-    }
-
-    // Sort all signals by timestamp (most recent first) and return top 15
-    return signals
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, 15);
+    return weakSignals.map(signal => ({
+      id: signal.id,
+      signalType: signal.signalType,
+      title: signal.title,
+      description: signal.description,
+      severity: signal.severity,
+      confidenceScore: Number(signal.confidenceScore),
+      status: signal.status,
+      timestamp: signal.detectedAt,
+      category: signal.category || undefined,
+      affectedEntities: signal.affectedEntities,
+    }));
   }
 
   private async getSignalDistributionByTheme(

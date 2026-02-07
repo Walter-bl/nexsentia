@@ -13,6 +13,7 @@ import { JiraIssue } from '../jira/entities/jira-issue.entity';
 import { SlackMessage } from '../slack/entities/slack-message.entity';
 import { TeamsMessage } from '../teams/entities/teams-message.entity';
 import { ServiceNowIncident } from '../servicenow/entities/servicenow-incident.entity';
+import { WeakSignal } from '../weak-signals/entities/weak-signal.entity';
 
 // Services
 import { MetricDefinitionService } from './services/metric-definition.service';
@@ -37,6 +38,7 @@ import { KpiSeedController } from './controllers/kpi-seed.controller';
       SlackMessage,
       TeamsMessage,
       ServiceNowIncident,
+      WeakSignal,
     ]),
     ConfigModule,
   ],
