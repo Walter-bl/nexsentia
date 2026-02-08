@@ -25,6 +25,7 @@ import { PiiValidationService } from './services/pii-validation.service';
 import { GraphBuilderService } from './services/graph-builder.service';
 import { GraphQueryService } from './services/graph-query.service';
 import { PrivacyDashboardService } from './services/privacy-dashboard.service';
+import { DataAnonymizationCronService } from './services/data-anonymization-cron.service';
 
 // Controllers
 import { PiiController } from './controllers/pii.controller';
@@ -57,6 +58,7 @@ import { PrivacyDashboardController } from './controllers/privacy-dashboard.cont
     GraphBuilderService,
     GraphQueryService,
     PrivacyDashboardService,
+    DataAnonymizationCronService,
   ],
   exports: [
     PiiDetectionService,

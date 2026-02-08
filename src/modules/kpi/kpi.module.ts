@@ -20,6 +20,7 @@ import { MetricDefinitionService } from './services/metric-definition.service';
 import { MetricAggregationService } from './services/metric-aggregation.service';
 import { BusinessImpactService } from './services/business-impact.service';
 import { KpiValidationService } from './services/kpi-validation.service';
+import { TeamImpactService } from './services/team-impact.service';
 
 // Controllers
 import { MetricsController } from './controllers/metrics.controller';
@@ -53,12 +54,14 @@ import { KpiSeedController } from './controllers/kpi-seed.controller';
     MetricAggregationService,
     BusinessImpactService,
     KpiValidationService,
+    TeamImpactService,
   ],
   exports: [
     MetricDefinitionService,
     MetricAggregationService,
     BusinessImpactService,
     KpiValidationService,
+    TeamImpactService,
   ],
 })
 export class KpiModule {}

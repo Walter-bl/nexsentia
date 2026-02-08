@@ -15,6 +15,7 @@ import { MetricDefinitionService } from '../services/metric-definition.service';
 import { MetricAggregationService } from '../services/metric-aggregation.service';
 import { BusinessImpactService } from '../services/business-impact.service';
 import { KpiValidationService } from '../services/kpi-validation.service';
+import { TeamImpactService } from '../services/team-impact.service';
 import { MetricValue } from '../entities/metric-value.entity';
 import { MetricDefinition } from '../entities/metric-definition.entity';
 import { KpiSnapshot } from '../entities/kpi-snapshot.entity';
@@ -48,6 +49,7 @@ export class DashboardController {
     private readonly aggregationService: MetricAggregationService,
     private readonly impactService: BusinessImpactService,
     private readonly validationService: KpiValidationService,
+    private readonly teamImpactService: TeamImpactService,
   ) {}
 
   @Get('organizational-pulse')
@@ -987,5 +989,22 @@ export class DashboardController {
       return 'Support';
     }
     return 'Engineering'; // Default
+  }
+
+  /**
+   * GET /api/v1/kpi/dashboard/team-impact
+   * Get comprehensive team impact dashboard showing time saved and execution speed
+   * Focuses on team productivity metrics rather than financial metrics
+   */
+  @Get('team-impact')
+  async getTeamImpact(@CurrentTenant() tenantId: number) {
+    console.log(`[DashboardController] Getting team impact dashboard for tenant: ${tenantId}`);
+
+    const dashboard = await this.teamImpactService.getTeamImpactDashboard(tenantId);
+
+    console.log(`[DashboardController] Team impact calculated for ${dashboard.teamBreakdown.length} teams`);
+    console.log(`[DashboardController] Total time saved: ${dashboard.totalValue.timeSaved} hours`);
+
+    return dashboard;
   }
 }

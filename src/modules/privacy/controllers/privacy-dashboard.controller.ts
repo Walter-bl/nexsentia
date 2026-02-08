@@ -1,13 +1,15 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { CurrentTenant } from '../../../common/decorators/current-tenant.decorator';
 import { PrivacyDashboardService } from '../services/privacy-dashboard.service';
+import { DataAnonymizationCronService } from '../services/data-anonymization-cron.service';
 
 @Controller('privacy/dashboard')
 @UseGuards(JwtAuthGuard)
 export class PrivacyDashboardController {
   constructor(
     private readonly privacyDashboardService: PrivacyDashboardService,
+    private readonly anonymizationCronService: DataAnonymizationCronService,
   ) {}
 
   /**
@@ -53,5 +55,21 @@ export class PrivacyDashboardController {
   @Get('compliance')
   async getComplianceStatus(@CurrentTenant() tenantId: number) {
     return await this.privacyDashboardService.getComplianceStatus(tenantId);
+  }
+
+  /**
+   * POST /api/v1/privacy/dashboard/anonymize
+   * Manually trigger data anonymization for ingestion data only
+   * NOTE: Does NOT anonymize user accounts, only integration data (Jira, ServiceNow, Slack, Teams)
+   */
+  @Post('anonymize')
+  async triggerAnonymization() {
+    const result = await this.anonymizationCronService.anonymizeAllData();
+    return {
+      success: true,
+      message: 'Ingestion data anonymization completed successfully',
+      stats: result,
+      totalAnonymized: Object.values(result).reduce((sum, count) => sum + count, 0),
+    };
   }
 }
