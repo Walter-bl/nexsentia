@@ -1795,6 +1795,114 @@
 									]
 								}
 							}
+						},
+						{
+							"name": "Get Team Impact Dashboard",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/dashboard/team-impact?timeRange=1m",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "dashboard", "team-impact"],
+									"query": [
+										{
+											"key": "timeRange",
+											"value": "1m",
+											"description": "7d, 14d, 1m, 3m, 6m, 1y"
+										},
+										{
+											"key": "periodStart",
+											"value": "2026-01-01",
+											"disabled": true
+										},
+										{
+											"key": "periodEnd",
+											"value": "2026-01-31",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get team impact dashboard showing time saved and execution speed by teams. Supports time range filtering (7d, 14d, 1m, 3m, 6m, 1y) or custom date ranges. All time-related values are in hours, not currency."
+							}
+						},
+						{
+							"name": "Get Team Impact Dashboard (7 days)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/dashboard/team-impact?timeRange=7d",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "dashboard", "team-impact"],
+									"query": [
+										{
+											"key": "timeRange",
+											"value": "7d"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Team Impact Dashboard (3 months)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/dashboard/team-impact?timeRange=3m",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "dashboard", "team-impact"],
+									"query": [
+										{
+											"key": "timeRange",
+											"value": "3m"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Team Impact Dashboard (Custom Range)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/kpi/dashboard/team-impact?periodStart=2026-01-01&periodEnd=2026-01-31",
+									"host": ["{{base_url}}"],
+									"path": ["kpi", "dashboard", "team-impact"],
+									"query": [
+										{
+											"key": "periodStart",
+											"value": "2026-01-01"
+										},
+										{
+											"key": "periodEnd",
+											"value": "2026-01-31"
+										}
+									]
+								}
+							}
 						}
 					]
 				}

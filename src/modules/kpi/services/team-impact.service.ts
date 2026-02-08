@@ -37,7 +37,7 @@ export interface TeamMetrics {
 
 export interface ImpactDashboard {
   totalValue: {
-    timeSaved: number; // total hours saved
+    timeSavedHours: number; // total hours saved
     since: string;
     periodMonths: number;
   };
@@ -52,24 +52,24 @@ export interface ImpactDashboard {
     meetingsTriggered: number;
     documentationUpdates: number;
     incidentsAvoided: number;
-    estimatedTimeSaved: string; // e.g., "€285k"
+    estimatedTimeSavedHours: number; // total hours
   };
   beforePlatform: {
     avgIssueDetection: number; // in days
     crossTeamFrictionResolution: number; // in days
     monthlyIncidents: string; // range like "8-12"
-    quarterlyImpact: string; // time lost
+    quarterlyImpactHours: number; // time lost in hours
   };
   withPlatform: {
     avgIssueDetection: number; // in days
     crossTeamFrictionResolution: number; // in days
     monthlyIncidents: string; // range like "2-3"
-    quarterlyImpact: string; // time saved
+    quarterlyImpactHours: number; // time saved in hours
   };
   improvement: {
     issueDetectionSpeed: string; // e.g., "85% faster"
     fewerIncidents: string; // e.g., "76% fewer"
-    quarterlySavings: string; // e.g., "€670k"
+    quarterlySavingsHours: number; // hours saved
   };
   teamBreakdown: TeamMetrics[];
 }
@@ -94,15 +94,19 @@ export class TeamImpactService {
   /**
    * Get comprehensive team impact dashboard
    */
-  async getTeamImpactDashboard(tenantId: number): Promise<ImpactDashboard> {
+  async getTeamImpactDashboard(tenantId: number, startDate?: Date, endDate?: Date): Promise<ImpactDashboard> {
     this.logger.log(`Generating team impact dashboard for tenant ${tenantId}`);
 
-    const platformStartDate = new Date();
-    platformStartDate.setMonth(platformStartDate.getMonth() - 6); // 6 months ago
+    // Use provided dates or default to 6 months
+    const platformStartDate = startDate || new Date(new Date().setMonth(new Date().getMonth() - 6));
+    const currentDate = endDate || new Date();
 
-    const currentDate = new Date();
-    const previousPeriodStart = new Date(platformStartDate);
-    previousPeriodStart.setMonth(previousPeriodStart.getMonth() - 6);
+    // Calculate period length in months
+    const periodMonths = Math.ceil((currentDate.getTime() - platformStartDate.getTime()) / (30 * 24 * 60 * 60 * 1000));
+
+    // Calculate previous period for comparison (same length as current period)
+    const periodLength = currentDate.getTime() - platformStartDate.getTime();
+    const previousPeriodStart = new Date(platformStartDate.getTime() - periodLength);
 
     // Get all teams from ingested data
     const teams = await this.extractTeams(tenantId);
@@ -128,17 +132,18 @@ export class TeamImpactService {
     const avgEngineerHourlyCost = 100; // $100/hour
     const totalValueSaved = totalTimeSaved * avgEngineerHourlyCost;
 
-    // Estimate platform cost (example: $50k for 6 months)
-    const platformCost = 50000;
+    // Estimate platform cost (scales with period)
+    const monthlyPlatformCost = 8333; // ~$100k/year
+    const platformCost = monthlyPlatformCost * periodMonths;
     const roi = totalValueSaved / platformCost;
 
     const issuesPrevented = teamBreakdown.reduce((sum, team) => sum + team.incidentsPrevented, 0);
 
     return {
       totalValue: {
-        timeSaved: totalTimeSaved,
+        timeSavedHours: parseFloat(totalTimeSaved.toFixed(2)),
         since: platformStartDate.toISOString().split('T')[0],
-        periodMonths: 6,
+        periodMonths,
       },
       roi: {
         multiple: parseFloat(roi.toFixed(1)),
@@ -151,7 +156,7 @@ export class TeamImpactService {
         meetingsTriggered: overallMetrics.totalMeetings,
         documentationUpdates: overallMetrics.totalDocs,
         incidentsAvoided: issuesPrevented,
-        estimatedTimeSaved: `€${Math.round(totalValueSaved / 1000)}k`,
+        estimatedTimeSavedHours: parseFloat(totalTimeSaved.toFixed(2)),
       },
       beforePlatform,
       withPlatform,
@@ -273,8 +278,8 @@ export class TeamImpactService {
       .createQueryBuilder('message')
       .where('message.tenantId = :tenantId', { tenantId })
       .andWhere('message.text LIKE :teamName', { teamName: `%${teamName}%` })
-      .andWhere('message.timestamp >= :startDate', { startDate })
-      .andWhere('message.timestamp <= :endDate', { endDate })
+      .andWhere('message.slackCreatedAt >= :startDate', { startDate })
+      .andWhere('message.slackCreatedAt <= :endDate', { endDate })
       .getCount();
 
     const teamsMentions = await this.teamsRepository
@@ -440,18 +445,18 @@ export class TeamImpactService {
         avgIssueDetection: parseFloat((previousDetectionTime / 24).toFixed(0)), // convert to days
         crossTeamFrictionResolution: parseFloat((previousFrictionTime / 24).toFixed(0)), // convert to days
         monthlyIncidents: `${Math.floor(previousMonthlyIncidents)}-${Math.ceil(previousMonthlyIncidents * 1.5)}`,
-        quarterlyImpact: `€${Math.round(previousQuarterlyImpact)}k`,
+        quarterlyImpactHours: parseFloat(previousQuarterlyImpact.toFixed(2)),
       },
       withPlatform: {
         avgIssueDetection: parseFloat((currentDetectionTime / 24).toFixed(0)), // convert to days
         crossTeamFrictionResolution: parseFloat((currentFrictionTime / 24).toFixed(0)), // convert to days
         monthlyIncidents: `${Math.floor(currentMonthlyIncidents)}-${Math.ceil(currentMonthlyIncidents * 1.2)}`,
-        quarterlyImpact: `€${Math.round(currentQuarterlyImpact)}k`,
+        quarterlyImpactHours: parseFloat(currentQuarterlyImpact.toFixed(2)),
       },
       improvement: {
         issueDetectionSpeed: `${Math.round(detectionSpeedImprovement)}% faster`,
         fewerIncidents: `${Math.round(incidentReduction)}% fewer`,
-        quarterlySavings: `€${Math.round(quarterlySavings)}k`,
+        quarterlySavingsHours: parseFloat(quarterlySavings.toFixed(2)),
       },
     };
   }

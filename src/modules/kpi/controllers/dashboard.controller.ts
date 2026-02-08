@@ -997,13 +997,21 @@ export class DashboardController {
    * Focuses on team productivity metrics rather than financial metrics
    */
   @Get('team-impact')
-  async getTeamImpact(@CurrentTenant() tenantId: number) {
+  async getTeamImpact(
+    @CurrentTenant() tenantId: number,
+    @Query('periodStart') periodStart?: string,
+    @Query('periodEnd') periodEnd?: string,
+    @Query('timeRange') timeRange?: '7d' | '14d' | '1m' | '3m' | '6m' | '1y',
+  ) {
     console.log(`[DashboardController] Getting team impact dashboard for tenant: ${tenantId}`);
 
-    const dashboard = await this.teamImpactService.getTeamImpactDashboard(tenantId);
+    const { start, end } = this.calculateDateRange(periodStart, periodEnd, timeRange);
+    console.log(`[DashboardController] Date range:`, { start, end, timeRange });
+
+    const dashboard = await this.teamImpactService.getTeamImpactDashboard(tenantId, start, end);
 
     console.log(`[DashboardController] Team impact calculated for ${dashboard.teamBreakdown.length} teams`);
-    console.log(`[DashboardController] Total time saved: ${dashboard.totalValue.timeSaved} hours`);
+    console.log(`[DashboardController] Total time saved: ${dashboard.totalValue.timeSavedHours} hours`);
 
     return dashboard;
   }
