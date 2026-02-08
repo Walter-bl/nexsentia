@@ -3,6 +3,8 @@ import {
   Get,
   Query,
   UseGuards,
+  Param,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { CurrentTenant } from '../../../common/decorators/current-tenant.decorator';
@@ -68,6 +70,34 @@ export class ActionCenterController {
     return {
       ...stats,
       byStatus,
+    };
+  }
+
+  /**
+   * GET /api/v1/action-center/:id
+   * Get detailed information about a specific action with resolution steps
+   */
+  @Get(':id')
+  async getActionDetail(
+    @CurrentTenant() tenantId: number,
+    @Param('id') id: string,
+  ) {
+    console.log(`[ActionCenterController] Getting action detail for id: ${id}`);
+
+    // Get all actions and find the specific one
+    const { actions } = await this.actionGeneratorService.generateActions(tenantId);
+    const action = actions.find(a => a.id === id);
+
+    if (!action) {
+      throw new NotFoundException(`Action with id ${id} not found`);
+    }
+
+    // Generate detailed resolution steps based on action type
+    const resolutionPlan = await this.actionGeneratorService.generateResolutionPlan(action);
+
+    return {
+      ...action,
+      resolutionPlan,
     };
   }
 }
