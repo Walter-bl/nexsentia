@@ -3106,6 +3106,307 @@
 					]
 				}
 			]
+		},
+		{
+			"name": "Alerts",
+			"item": [
+				{
+					"name": "Alert Rules",
+					"item": [
+						{
+							"name": "List Alert Rules",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/alerts/rules",
+									"host": ["{{base_url}}"],
+									"path": ["alerts", "rules"]
+								},
+								"description": "Get all alert rules for the tenant"
+							}
+						},
+						{
+							"name": "Create Alert Rule",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"High Priority Incident Alert\",\n  \"description\": \"Alert when high priority incidents are created\",\n  \"ruleType\": \"threshold\",\n  \"sourceType\": \"incident\",\n  \"thresholdConfig\": {\n    \"metric\": \"incident_count\",\n    \"operator\": \">\",\n    \"value\": 5,\n    \"timeWindow\": 3600\n  },\n  \"alertSeverity\": \"high\",\n  \"deliveryChannels\": [\"email\", \"slack\"],\n  \"cooldownMinutes\": 60,\n  \"isActive\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/alerts/rules",
+									"host": ["{{base_url}}"],
+									"path": ["alerts", "rules"]
+								},
+								"description": "Create a new alert rule"
+							}
+						},
+						{
+							"name": "Update Alert Rule",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Updated Alert Rule\",\n  \"isActive\": true,\n  \"cooldownMinutes\": 120\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/alerts/rules/1",
+									"host": ["{{base_url}}"],
+									"path": ["alerts", "rules", "1"]
+								},
+								"description": "Update an existing alert rule"
+							}
+						},
+						{
+							"name": "Delete Alert Rule",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/alerts/rules/1",
+									"host": ["{{base_url}}"],
+									"path": ["alerts", "rules", "1"]
+								},
+								"description": "Delete an alert rule"
+							}
+						}
+					]
+				},
+				{
+					"name": "Alert Subscriptions",
+					"item": [
+						{
+							"name": "List Subscriptions",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/alerts/subscriptions",
+									"host": ["{{base_url}}"],
+									"path": ["alerts", "subscriptions"]
+								},
+								"description": "Get all alert subscriptions for the current user"
+							}
+						},
+						{
+							"name": "Create Subscription",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"ruleId\": 1,\n  \"channels\": {\n    \"email\": {\n      \"enabled\": true,\n      \"address\": \"user@example.com\"\n    },\n    \"slack\": {\n      \"enabled\": true,\n      \"webhookUrl\": \"https://hooks.slack.com/services/YOUR/WEBHOOK/URL\",\n      \"channel\": \"#alerts\"\n    }\n  },\n  \"preferences\": {\n    \"quietHours\": {\n      \"enabled\": true,\n      \"startHour\": 22,\n      \"endHour\": 8\n    },\n    \"severityFilter\": [\"critical\", \"high\"]\n  },\n  \"isActive\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/alerts/subscriptions",
+									"host": ["{{base_url}}"],
+									"path": ["alerts", "subscriptions"]
+								},
+								"description": "Subscribe to an alert rule"
+							}
+						},
+						{
+							"name": "Update Subscription",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"channels\": {\n    \"email\": {\n      \"enabled\": false\n    }\n  },\n  \"isActive\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/alerts/subscriptions/1",
+									"host": ["{{base_url}}"],
+									"path": ["alerts", "subscriptions", "1"]
+								},
+								"description": "Update an alert subscription"
+							}
+						},
+						{
+							"name": "Delete Subscription",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/alerts/subscriptions/1",
+									"host": ["{{base_url}}"],
+									"path": ["alerts", "subscriptions", "1"]
+								},
+								"description": "Unsubscribe from an alert rule"
+							}
+						}
+					]
+				},
+				{
+					"name": "Alert History",
+					"item": [
+						{
+							"name": "Get Alert History",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/alerts/history?page=1&limit=20",
+									"host": ["{{base_url}}"],
+									"path": ["alerts", "history"],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20"
+										},
+										{
+											"key": "status",
+											"value": "sent",
+											"disabled": true
+										},
+										{
+											"key": "ruleId",
+											"value": "1",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get alert history with optional filters"
+							}
+						},
+						{
+							"name": "Get Delivery Statistics",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/alerts/stats",
+									"host": ["{{base_url}}"],
+									"path": ["alerts", "stats"]
+								},
+								"description": "Get alert delivery statistics (total sent, failed, suppressed)"
+							}
+						},
+						{
+							"name": "Get Rate Limits",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/alerts/rate-limits",
+									"host": ["{{base_url}}"],
+									"path": ["alerts", "rate-limits"]
+								},
+								"description": "Check current rate limit status for the user"
+							}
+						}
+					]
+				},
+				{
+					"name": "Manual Processing",
+					"item": [
+						{
+							"name": "Manually Process Alerts",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"sourceType\": \"weak_signal\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/alerts/process",
+									"host": ["{{base_url}}"],
+									"path": ["alerts", "process"]
+								},
+								"description": "Manually trigger alert processing for a specific source type"
+							}
+						}
+					]
+				}
+			]
 		}
 	]
 }

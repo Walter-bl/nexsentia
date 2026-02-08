@@ -82,14 +82,30 @@ export class DataAnonymizationCronService implements OnModuleInit {
    */
   private calculateCleanupSchedule(anonymizationSchedule: string): string {
     // Parse the schedule (format: second minute hour day month weekday)
-    const parts = anonymizationSchedule.split(' ');
+    // Filter out empty strings from split to handle multiple spaces
+    const parts = anonymizationSchedule.trim().split(/\s+/);
+
     if (parts.length === 6) {
-      const hour = parseInt(parts[2], 10);
+      const hourPart = parts[2];
+      // If hour is a wildcard, pattern, or can't be parsed, use default cleanup schedule
+      if (hourPart === '*' || hourPart.includes('*') || hourPart.includes('/')) {
+        this.logger.debug(`Hour field contains wildcard/pattern (${hourPart}), using default cleanup schedule`);
+        return '0 0 3 * * *'; // Default: 3 AM daily
+      }
+
+      const hour = parseInt(hourPart, 10);
+      if (isNaN(hour)) {
+        this.logger.debug(`Could not parse hour (${hourPart}), using default cleanup schedule`);
+        return '0 0 3 * * *';
+      }
+
       const cleanupHour = (hour + 1) % 24;
       parts[2] = cleanupHour.toString();
       return parts.join(' ');
     }
+
     // Fallback to 3 AM if can't parse
+    this.logger.debug(`Invalid cron format (${parts.length} parts), using default cleanup schedule`);
     return '0 0 3 * * *';
   }
 
