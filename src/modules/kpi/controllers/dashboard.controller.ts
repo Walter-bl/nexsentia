@@ -853,6 +853,7 @@ export class DashboardController {
     theme: string;
     incidentCount: number;
     signalCount: number;
+    totalCount: number;
     color: string;
   }>> {
     // Count incidents and signals by theme/category
@@ -947,6 +948,7 @@ export class DashboardController {
       theme,
       incidentCount: data.incidentCount,
       signalCount: data.signalCount,
+      totalCount: data.incidentCount + data.signalCount,
       color: data.color,
     }));
   }
