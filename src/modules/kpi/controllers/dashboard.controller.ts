@@ -70,12 +70,14 @@ export class DashboardController {
 
     for (const metric of metrics) {
       // Calculate metric directly from ingestion data in real-time
+      console.log(`[OrganizationalPulse] Calculating metric ${metric.metricKey} for period:`, { start, end });
       const result = await this.aggregationService.calculateMetric(metric, {
         tenantId,
         periodStart: start,
         periodEnd: end,
         granularity: 'daily',
       });
+      console.log(`[OrganizationalPulse] Metric ${metric.metricKey} result:`, { value: result?.value, dataPoints: result?.metadata?.dataPoints });
 
       if (result && result.value !== undefined) {
         // Calculate comparison with previous period for trend
@@ -95,6 +97,13 @@ export class DashboardController {
           trend = changePercent > 0 ? 'up' : 'down';
         }
 
+        const status = this.determineStatus(result.value, metric.thresholds);
+        console.log(`[OrganizationalPulse] ===== Metric: ${metric.metricKey} =====`);
+        console.log(`  Value: ${result.value} ${metric.displayConfig?.unit || ''}`);
+        console.log(`  DataPoints: ${result.metadata?.dataPoints}`);
+        console.log(`  Status: ${status}`);
+        console.log(`  Thresholds:`, JSON.stringify(metric.thresholds, null, 2));
+
         metricData.push({
           key: metric.metricKey,
           name: metric.name,
@@ -102,7 +111,7 @@ export class DashboardController {
           unit: metric.displayConfig?.unit,
           trend: trend,
           changePercent: parseFloat(changePercent.toFixed(2)),
-          status: this.determineStatus(result.value, metric.thresholds),
+          status,
           breakdown: result.breakdown,
         });
       }
@@ -113,12 +122,14 @@ export class DashboardController {
     console.log('[OrganizationalPulse] Summary calculated:', summary);
 
     // Get business impacts for escalations chart
+    console.log('[OrganizationalPulse] Fetching impacts for date range:', { start, end, timeRange });
     const impacts = await this.impactService.getImpacts(tenantId, start, end);
     const totalLoss = await this.impactService.getTotalRevenueLoss(tenantId, start, end);
     console.log('[OrganizationalPulse] Business impacts:', impacts.length, 'Total loss:', totalLoss);
 
     // Group impacts by month for business escalations chart
     const escalationsByMonth = this.groupImpactsByMonth(impacts, start, end);
+    console.log('[OrganizationalPulse] Escalations by month:', JSON.stringify(escalationsByMonth, null, 2));
 
     // Calculate strategic alignment metrics
     const strategicAlignment = this.calculateStrategicAlignment(metricData);
@@ -152,7 +163,7 @@ export class DashboardController {
       businessEscalations: {
         chartData: escalationsByMonth,
         totalCount: impacts.length,
-        totalLoss: parseFloat(totalLoss.total.toString()),
+        totalLoss: Math.round(parseFloat(totalLoss.total.toString()) * 100) / 100,
       },
       teamSignals: teamSignals,
       recentSignals: recentSignals,
@@ -484,34 +495,33 @@ export class DashboardController {
   ): 'excellent' | 'good' | 'warning' | 'critical' {
     if (!thresholds) return 'good';
 
-    if (thresholds.critical) {
-      if (
-        (thresholds.critical.min !== undefined && value < thresholds.critical.min) ||
-        (thresholds.critical.max !== undefined && value > thresholds.critical.max)
-      ) {
-        return 'critical';
-      }
+    // Helper to check if value is within a range
+    const isInRange = (min?: number, max?: number): boolean => {
+      const aboveMin = min === undefined || value >= min;
+      const belowMax = max === undefined || value <= max;
+      return aboveMin && belowMax;
+    };
+
+    // Check in order from best to worst
+    if (thresholds.excellent && isInRange(thresholds.excellent.min, thresholds.excellent.max)) {
+      return 'excellent';
     }
 
-    if (thresholds.warning) {
-      if (
-        (thresholds.warning.min !== undefined && value < thresholds.warning.min) ||
-        (thresholds.warning.max !== undefined && value > thresholds.warning.max)
-      ) {
-        return 'warning';
-      }
+    if (thresholds.good && isInRange(thresholds.good.min, thresholds.good.max)) {
+      return 'good';
     }
 
-    if (thresholds.excellent) {
-      if (
-        (thresholds.excellent.min === undefined || value >= thresholds.excellent.min) &&
-        (thresholds.excellent.max === undefined || value <= thresholds.excellent.max)
-      ) {
-        return 'excellent';
-      }
+    if (thresholds.warning && isInRange(thresholds.warning.min, thresholds.warning.max)) {
+      return 'warning';
     }
 
-    return 'good';
+    if (thresholds.critical && isInRange(thresholds.critical.min, thresholds.critical.max)) {
+      return 'critical';
+    }
+
+    // Default: if value doesn't fall in any defined range, determine by extremes
+    // If value is outside all ranges, it's likely critical
+    return 'critical';
   }
 
   private calculateSummary(metrics: Array<{ status?: string }>) {
@@ -587,21 +597,29 @@ export class DashboardController {
 
   private groupImpactsByMonth(impacts: any[], start: Date, end: Date) {
     const monthlyData = [];
-    const current = new Date(start);
+    const current = new Date(start.getFullYear(), start.getMonth(), 1);
+    const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
 
-    while (current <= end) {
-      const monthStart = new Date(current.getFullYear(), current.getMonth(), 1);
-      const monthEnd = new Date(current.getFullYear(), current.getMonth() + 1, 0);
+    console.log('[groupImpactsByMonth] Processing', impacts.length, 'impacts from', start, 'to', end);
+    console.log('[groupImpactsByMonth] Month range:', current, 'to', endMonth);
+
+    while (current <= endMonth) {
+      const monthStart = new Date(current);
+      const monthEnd = new Date(current.getFullYear(), current.getMonth() + 1, 0, 23, 59, 59);
 
       const monthImpacts = impacts.filter(i => {
         const impactDate = new Date(i.impactDate);
         return impactDate >= monthStart && impactDate <= monthEnd;
       });
 
+      console.log('[groupImpactsByMonth]', monthStart.toISOString().slice(0, 7), ':', monthImpacts.length, 'impacts');
+
+      const monthTotalLoss = monthImpacts.reduce((sum, i) => sum + (parseFloat(i.estimatedRevenueLoss) || 0), 0);
+
       monthlyData.push({
         month: monthStart.toISOString().slice(0, 7),
         count: monthImpacts.length,
-        totalLoss: monthImpacts.reduce((sum, i) => sum + (parseFloat(i.estimatedRevenueLoss) || 0), 0),
+        totalLoss: Math.round(monthTotalLoss * 100) / 100,
         bySeverity: {
           critical: monthImpacts.filter(i => i.severity === 'critical').length,
           high: monthImpacts.filter(i => i.severity === 'high').length,

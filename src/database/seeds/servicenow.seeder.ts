@@ -8,6 +8,10 @@ export async function seedServiceNowData(dataSource: DataSource, tenantId: numbe
 
   console.log('\n🎫 Seeding ServiceNow integration data...');
 
+  // Delete existing incidents for this tenant to avoid duplicates
+  await serviceNowIncidentRepo.delete({ tenantId });
+  console.log('  🗑️  Deleted existing ServiceNow incidents');
+
   // ============================================
   // ServiceNow Connection
   // ============================================
@@ -116,22 +120,72 @@ export async function seedServiceNowData(dataSource: DataSource, tenantId: numbe
   const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
 
   // Generate 991 additional incidents (1000 total - 9 existing)
+  // Strategy: Create 40% recent (0-30 days), 30% mid (30-60 days), 30% old (60-90 days)
   for (let i = 0; i < 991; i++) {
     const template = incidentTemplates[Math.floor(Math.random() * incidentTemplates.length)];
-    const priority = priorities[Math.floor(Math.random() * priorities.length)];
     const state = states[Math.floor(Math.random() * states.length)];
     const categoryInfo = categories[Math.floor(Math.random() * categories.length)];
     const assignedUser = users[Math.floor(Math.random() * users.length)];
     const caller = users[Math.floor(Math.random() * users.length)];
 
-    // Generate timestamps
-    const daysAgo = Math.floor(Math.random() * 90);
+    // Generate timestamps - deterministic distribution across time periods
+    let daysAgo;
+    if (i < 400) {
+      // First 400 incidents: 0-30 days ago (recent)
+      daysAgo = Math.floor(Math.random() * 30);
+    } else if (i < 700) {
+      // Next 300 incidents: 30-60 days ago (mid)
+      daysAgo = Math.floor(Math.random() * 30) + 30;
+    } else {
+      // Last 291 incidents: 60-90 days ago (old)
+      daysAgo = Math.floor(Math.random() * 30) + 60;
+    }
     const hoursOffset = Math.floor(Math.random() * 24);
     const minutesOffset = Math.floor(Math.random() * 60);
     const openedDate = new Date(ninetyDaysAgo);
     openedDate.setDate(openedDate.getDate() + daysAgo);
     openedDate.setHours(hoursOffset);
     openedDate.setMinutes(minutesOffset);
+
+    // Adjust priority distribution based on age - recent incidents are less critical
+    let adjustedPriority;
+    if (daysAgo > 60) {
+      // Older data (60-90 days ago) - worse metrics, more critical incidents
+      const criticalChance = Math.random();
+      if (criticalChance < 0.15) {
+        adjustedPriority = priorities[0]; // 1 - Critical (15%)
+      } else if (criticalChance < 0.35) {
+        adjustedPriority = priorities[1]; // 2 - High (20%)
+      } else if (criticalChance < 0.65) {
+        adjustedPriority = priorities[2]; // 3 - Moderate (30%)
+      } else {
+        adjustedPriority = priorities[3]; // 4 - Low (35%)
+      }
+    } else if (daysAgo > 30) {
+      // Mid-range data (30-60 days ago) - moderate metrics
+      const criticalChance = Math.random();
+      if (criticalChance < 0.08) {
+        adjustedPriority = priorities[0]; // 1 - Critical (8%)
+      } else if (criticalChance < 0.25) {
+        adjustedPriority = priorities[1]; // 2 - High (17%)
+      } else if (criticalChance < 0.60) {
+        adjustedPriority = priorities[2]; // 3 - Moderate (35%)
+      } else {
+        adjustedPriority = priorities[3]; // 4 - Low (40%)
+      }
+    } else {
+      // Recent data (0-30 days ago) - best metrics, fewer critical incidents
+      const criticalChance = Math.random();
+      if (criticalChance < 0.03) {
+        adjustedPriority = priorities[0]; // 1 - Critical (3%)
+      } else if (criticalChance < 0.12) {
+        adjustedPriority = priorities[1]; // 2 - High (9%)
+      } else if (criticalChance < 0.40) {
+        adjustedPriority = priorities[2]; // 3 - Moderate (28%)
+      } else {
+        adjustedPriority = priorities[3]; // 4 - Low (60%)
+      }
+    }
 
     const incidentNum = 11000 + i;
     const incident: any = {
@@ -141,12 +195,12 @@ export async function seedServiceNowData(dataSource: DataSource, tenantId: numbe
       description: template.desc,
       state: state.name,
       stateValue: state.value,
-      priority: priority.name,
-      priorityValue: priority.value,
-      urgency: priority.urgency,
-      urgencyValue: priority.urgencyValue,
-      impact: priority.impact,
-      impactValue: priority.impactValue,
+      priority: adjustedPriority.name,
+      priorityValue: adjustedPriority.value,
+      urgency: adjustedPriority.urgency,
+      urgencyValue: adjustedPriority.urgencyValue,
+      impact: adjustedPriority.impact,
+      impactValue: adjustedPriority.impactValue,
       category: categoryInfo.category,
       subcategory: categoryInfo.subcategory,
       assignedTo: assignedUser.id,
@@ -162,11 +216,36 @@ export async function seedServiceNowData(dataSource: DataSource, tenantId: numbe
       sysUpdatedBy: assignedUser.id,
     };
 
-    // Add resolution data if resolved/closed
+    // Add resolution data if resolved/closed - with better resolution times for recent incidents
     if (state.isResolved) {
       const resolutionCode = resolutionCodes[Math.floor(Math.random() * resolutionCodes.length)];
-      const resolutionHours = Math.floor(Math.random() * 48) + 1; // 1-48 hours
-      const resolvedDate = new Date(openedDate.getTime() + resolutionHours * 60 * 60 * 1000);
+
+      // Resolution time based on age and priority - MUCH MORE EXTREME differences
+      let resolutionMinutes;
+      if (daysAgo > 60) {
+        // Older incidents: 12-72 hours (VERY poor resolution times)
+        resolutionMinutes = Math.floor(Math.random() * 60 * 60) + 720;
+      } else if (daysAgo > 30) {
+        // Mid-range incidents: 4-16 hours (moderate resolution times)
+        resolutionMinutes = Math.floor(Math.random() * 12 * 60) + 240;
+      } else {
+        // Recent incidents: VERY fast resolution
+        if (adjustedPriority.value === 1) {
+          // Critical: 15min - 2 hours (excellent!)
+          resolutionMinutes = Math.floor(Math.random() * 105) + 15;
+        } else if (adjustedPriority.value === 2) {
+          // High: 30min - 3 hours
+          resolutionMinutes = Math.floor(Math.random() * 150) + 30;
+        } else if (adjustedPriority.value === 3) {
+          // Moderate: 1-4 hours
+          resolutionMinutes = Math.floor(Math.random() * 180) + 60;
+        } else {
+          // Low: 1-5 hours
+          resolutionMinutes = Math.floor(Math.random() * 240) + 60;
+        }
+      }
+
+      const resolvedDate = new Date(openedDate.getTime() + resolutionMinutes * 60 * 1000);
       const closedDate = new Date(resolvedDate.getTime() + 30 * 60 * 1000); // 30 min after resolved
 
       incident.resolvedAt = resolvedDate;

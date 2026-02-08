@@ -83,6 +83,8 @@ export class PatternExtractionService {
       order: { jiraCreatedAt: 'DESC' },
     });
 
+    this.logger.debug(`Found ${issues.length} JIRA issues for tenant ${tenantId}`);
+
     const patterns: RecurringPattern[] = [];
     const summaryGroups = this.groupBySimilarity(issues.map(i => ({ id: i.id.toString(), text: i.summary, date: i.jiraCreatedAt || i.createdAt })));
 
@@ -135,6 +137,8 @@ export class PatternExtractionService {
       },
       order: { sysCreatedOn: 'DESC' },
     });
+
+    this.logger.debug(`Found ${incidents.length} ServiceNow incidents for tenant ${tenantId}`);
 
     const patterns: RecurringPattern[] = [];
     const descriptionGroups = this.groupBySimilarity(

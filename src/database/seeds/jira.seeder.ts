@@ -10,6 +10,10 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
 
   console.log('\n📊 Seeding Jira integration data...');
 
+  // Delete existing issues for this tenant to avoid duplicates
+  await jiraIssueRepo.delete({ tenantId });
+  console.log('  🗑️  Deleted existing Jira issues');
+
   // ============================================
   // Jira Connection
   // ============================================
@@ -502,21 +506,114 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
   ];
 
   // Generate 980 more issues (total will be 1000)
+  // Strategy: Create 40% recent (0-30 days), 30% mid (30-60 days), 30% old (60-90 days)
   for (let i = 0; i < 980; i++) {
     const projectOptions = [prodProject, engProject, supProject];
     const project = projectOptions[i % 3];
     const projectPrefix = project!.jiraProjectKey;
     const template = issueTemplates[i % issueTemplates.length];
-    const priority = priorities[Math.floor(Math.random() * priorities.length)];
-    const status = statuses[Math.floor(Math.random() * statuses.length)];
     const issueType = issueTypes[Math.floor(Math.random() * issueTypes.length)];
     const assignee = users[Math.floor(Math.random() * users.length)];
     const reporter = users[Math.floor(Math.random() * users.length)];
 
-    // Generate dates within last 90 days
-    const daysAgo = Math.floor(Math.random() * 90);
+    // Generate dates - deterministic distribution across time periods
+    let daysAgo;
+    if (i < 400) {
+      // First 400 issues: 0-30 days ago (recent)
+      daysAgo = Math.floor(Math.random() * 30);
+    } else if (i < 700) {
+      // Next 300 issues: 30-60 days ago (mid)
+      daysAgo = Math.floor(Math.random() * 30) + 30;
+    } else {
+      // Last 280 issues: 60-90 days ago (old)
+      daysAgo = Math.floor(Math.random() * 30) + 60;
+    }
     const createdDate = new Date();
     createdDate.setDate(createdDate.getDate() - daysAgo);
+
+    // Adjust priority and status distribution based on age - recent issues have better metrics
+    let adjustedPriority;
+    let adjustedStatus;
+
+    if (daysAgo > 60) {
+      // Older data (60-90 days ago) - MUCH WORSE metrics
+      const priorityChance = Math.random();
+      if (priorityChance < 0.20) {
+        adjustedPriority = 'critical'; // 20% (many critical!)
+      } else if (priorityChance < 0.45) {
+        adjustedPriority = 'high'; // 25%
+      } else if (priorityChance < 0.75) {
+        adjustedPriority = 'medium'; // 30%
+      } else {
+        adjustedPriority = 'low'; // 25%
+      }
+
+      // MUCH MORE open/in-progress issues in older data (high backlog!)
+      const statusChance = Math.random();
+      if (statusChance < 0.55) {
+        adjustedStatus = 'open'; // 55% (huge backlog!)
+      } else if (statusChance < 0.75) {
+        adjustedStatus = 'in_progress'; // 20%
+      } else if (statusChance < 0.85) {
+        adjustedStatus = 'done'; // 10%
+      } else if (statusChance < 0.93) {
+        adjustedStatus = 'resolved'; // 8%
+      } else {
+        adjustedStatus = 'closed'; // 7%
+      }
+    } else if (daysAgo > 30) {
+      // Mid-range data (30-60 days ago) - moderate metrics
+      const priorityChance = Math.random();
+      if (priorityChance < 0.05) {
+        adjustedPriority = 'critical'; // 5%
+      } else if (priorityChance < 0.20) {
+        adjustedPriority = 'high'; // 15%
+      } else if (priorityChance < 0.55) {
+        adjustedPriority = 'medium'; // 35%
+      } else {
+        adjustedPriority = 'low'; // 45%
+      }
+
+      // Better completion rate
+      const statusChance = Math.random();
+      if (statusChance < 0.25) {
+        adjustedStatus = 'open'; // 25%
+      } else if (statusChance < 0.40) {
+        adjustedStatus = 'in_progress'; // 15%
+      } else if (statusChance < 0.70) {
+        adjustedStatus = 'done'; // 30%
+      } else if (statusChance < 0.85) {
+        adjustedStatus = 'resolved'; // 15%
+      } else {
+        adjustedStatus = 'closed'; // 15%
+      }
+    } else {
+      // Recent data (0-30 days ago) - MUCH BETTER metrics
+      const priorityChance = Math.random();
+      if (priorityChance < 0.01) {
+        adjustedPriority = 'critical'; // 1% (almost none!)
+      } else if (priorityChance < 0.05) {
+        adjustedPriority = 'high'; // 4%
+      } else if (priorityChance < 0.20) {
+        adjustedPriority = 'medium'; // 15%
+      } else {
+        adjustedPriority = 'low'; // 80%
+      }
+
+      // VERY high completion rate for recent issues
+      const statusChance = Math.random();
+      if (statusChance < 0.08) {
+        adjustedStatus = 'open'; // 8% (very low backlog!)
+      } else if (statusChance < 0.15) {
+        adjustedStatus = 'in_progress'; // 7%
+      } else if (statusChance < 0.70) {
+        adjustedStatus = 'done'; // 55% (high completion!)
+      } else if (statusChance < 0.90) {
+        adjustedStatus = 'resolved'; // 20%
+      } else {
+        adjustedStatus = 'closed'; // 10%
+      }
+    }
 
     const updatedDate = new Date(createdDate);
     updatedDate.setHours(updatedDate.getHours() + Math.floor(Math.random() * 48));
@@ -528,8 +625,8 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       summary: `${template.summary} #${i + 1}`,
       description: template.description,
       issueType,
-      status,
-      priority,
+      status: adjustedStatus,
+      priority: adjustedPriority,
       assigneeAccountId: assignee.id,
       assigneeDisplayName: assignee.name,
       reporterAccountId: reporter.id,
@@ -539,7 +636,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
     };
 
     // Add resolved date if status is resolved or closed
-    if (status === 'resolved' || status === 'closed') {
+    if (adjustedStatus === 'resolved' || adjustedStatus === 'closed' || adjustedStatus === 'done') {
       issue.resolvedAt = updatedDate;
     }
 

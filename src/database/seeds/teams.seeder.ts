@@ -10,6 +10,10 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
 
   console.log('\n📋 Seeding Teams integration data...');
 
+  // Delete existing messages for this tenant to avoid duplicates
+  await teamsMessageRepo.delete({ tenantId });
+  console.log('  🗑️  Deleted existing Teams messages');
+
   // ============================================
   // Teams Connection
   // ============================================
@@ -209,8 +213,20 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
     const user = users[Math.floor(Math.random() * users.length)];
     const importance = importanceLevels[Math.floor(Math.random() * importanceLevels.length)];
 
-    // Generate timestamp within last 90 days
-    const daysAgo = Math.floor(Math.random() * 90);
+    // Generate timestamp within last 90 days - with more activity in recent periods
+    let daysAgo;
+    const timeDistribution = Math.random();
+    if (timeDistribution < 0.50) {
+      // 50% of messages in last 30 days (recent, high engagement)
+      daysAgo = Math.floor(Math.random() * 30);
+    } else if (timeDistribution < 0.75) {
+      // 25% of messages in 30-60 days ago (moderate engagement)
+      daysAgo = Math.floor(Math.random() * 30) + 30;
+    } else {
+      // 25% of messages in 60-90 days ago (lower engagement)
+      daysAgo = Math.floor(Math.random() * 30) + 60;
+    }
+
     const hoursOffset = Math.floor(Math.random() * 24);
     const minutesOffset = Math.floor(Math.random() * 60);
     const messageDate = new Date(ninetyDaysAgo);

@@ -79,9 +79,11 @@ export class WeakSignalSchedulerService implements OnModuleInit {
       });
 
       this.logger.log(`Found ${tenants.length} active tenants to process`);
+      this.logger.log(`Tenant IDs: [${tenants.map(t => t.id).join(', ')}]`);
 
       // Process each tenant
       for (const tenant of tenants) {
+        this.logger.log(`Processing tenant ${tenant.id} (${tenant.name})`);
         try {
           await this.runDetectionForTenant(tenant.id);
         } catch (error) {

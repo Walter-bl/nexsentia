@@ -10,6 +10,10 @@ export async function seedSlackData(dataSource: DataSource, tenantId: number): P
 
   console.log('\n💬 Seeding Slack integration data...');
 
+  // Delete existing messages for this tenant to avoid duplicates
+  await slackMessageRepo.delete({ tenantId });
+  console.log('  🗑️  Deleted existing Slack messages');
+
   // ============================================
   // Slack Connection
   // ============================================
@@ -202,8 +206,20 @@ export async function seedSlackData(dataSource: DataSource, tenantId: number): P
     const text = templates[Math.floor(Math.random() * templates.length)];
     const user = users[Math.floor(Math.random() * users.length)];
 
-    // Generate timestamp within last 90 days
-    const daysAgo = Math.floor(Math.random() * 90);
+    // Generate timestamp within last 90 days - with more activity in recent periods
+    let daysAgo;
+    const timeDistribution = Math.random();
+    if (timeDistribution < 0.50) {
+      // 50% of messages in last 30 days (recent, high engagement)
+      daysAgo = Math.floor(Math.random() * 30);
+    } else if (timeDistribution < 0.75) {
+      // 25% of messages in 30-60 days ago (moderate engagement)
+      daysAgo = Math.floor(Math.random() * 30) + 30;
+    } else {
+      // 25% of messages in 60-90 days ago (lower engagement)
+      daysAgo = Math.floor(Math.random() * 30) + 60;
+    }
+
     const hoursOffset = Math.floor(Math.random() * 24);
     const minutesOffset = Math.floor(Math.random() * 60);
     const messageDate = new Date(ninetyDaysAgo);
@@ -212,7 +228,16 @@ export async function seedSlackData(dataSource: DataSource, tenantId: number): P
     messageDate.setMinutes(minutesOffset);
 
     const tsValue = Math.floor(messageDate.getTime() / 1000) + (i * 0.001);
-    const replyCount = Math.floor(Math.random() * 15);
+
+    // More replies and reactions for recent messages
+    let replyCount;
+    if (daysAgo < 30) {
+      replyCount = Math.floor(Math.random() * 20) + 5; // 5-25 replies
+    } else if (daysAgo < 60) {
+      replyCount = Math.floor(Math.random() * 10) + 2; // 2-12 replies
+    } else {
+      replyCount = Math.floor(Math.random() * 5); // 0-5 replies
+    }
 
     additionalMessages.push({
       channelId: channel!.id,

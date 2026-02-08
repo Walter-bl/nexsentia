@@ -3,10 +3,12 @@ import { config } from 'dotenv';
 import dataSource from '../../config/database/typeorm.config';
 import { seedRolesAndPermissions } from './roles-permissions.seeder';
 import { seedDemoTenant } from './tenant.seeder';
+import { seedMetricDefinitions } from './metric-definitions.seeder';
 import { seedJiraData } from './jira.seeder';
 import { seedSlackData } from './slack.seeder';
 import { seedTeamsData } from './teams.seeder';
 import { seedServiceNowData } from './servicenow.seeder';
+import { seedBusinessImpacts } from './business-impact.seeder';
 
 // Load environment variables
 config();
@@ -27,6 +29,9 @@ async function runSeeders() {
     // Create demo tenant and get its ID and user ID
     const { tenantId: demoTenantId, userId: demoUserId } = await seedDemoTenant(dataSource);
 
+    // Seed metric definitions
+    await seedMetricDefinitions(dataSource, demoTenantId);
+
     // Seed integration demo data
     console.log(`📦 Seeding integration demo data for tenant ${demoTenantId} (user: ${demoUserId})...\n`);
 
@@ -34,6 +39,9 @@ async function runSeeders() {
     await seedSlackData(dataSource, demoTenantId);
     await seedTeamsData(dataSource, demoTenantId);
     await seedServiceNowData(dataSource, demoTenantId);
+
+    // Seed business impacts (must be after integration data)
+    await seedBusinessImpacts(dataSource, demoTenantId);
 
     console.log('\n========================================');
     console.log('Database seeding completed successfully!');
