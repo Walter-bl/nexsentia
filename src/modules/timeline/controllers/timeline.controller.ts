@@ -84,25 +84,36 @@ export class TimelineController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a single timeline event or signal' })
-  @ApiResponse({ status: 200, description: 'Timeline event retrieved successfully' })
+  @ApiOperation({ summary: 'Get a single timeline event or signal with AI-generated hypotheses' })
+  @ApiResponse({ status: 200, description: 'Timeline event retrieved successfully with hypotheses and recommendations' })
   @ApiResponse({ status: 404, description: 'Timeline event not found' })
   async getEvent(
     @CurrentTenant() tenantId: number,
     @Param('id') id: string,
   ) {
+    let event;
+
     // Check if ID is a signal ID format (source_id)
     if (id.includes('_')) {
-      return await this.timelineGeneratorService.getSignalTimeline(tenantId, id);
+      event = await this.timelineGeneratorService.getSignalTimeline(tenantId, id);
+    } else {
+      // Otherwise, treat as numeric timeline event ID
+      const numericId = parseInt(id, 10);
+      if (isNaN(numericId)) {
+        throw new NotFoundException(`Invalid ID format: ${id}`);
+      }
+      event = await this.timelineService.getEvent(tenantId, numericId);
     }
 
-    // Otherwise, treat as numeric timeline event ID
-    const numericId = parseInt(id, 10);
-    if (isNaN(numericId)) {
-      throw new NotFoundException(`Invalid ID format: ${id}`);
-    }
+    // Generate AI hypotheses and recommendations
+    console.log('[TimelineController] Generating hypotheses for event:', event.id);
+    const hypotheses = await this.timelineService.generateHypotheses(event);
+    console.log('[TimelineController] Hypotheses generated:', JSON.stringify(hypotheses, null, 2));
 
-    return await this.timelineService.getEvent(tenantId, numericId);
+    return {
+      ...event,
+      hypotheses,
+    };
   }
 
   @Post()
