@@ -126,6 +126,11 @@ export class DashboardController {
     // Get business impacts for escalations chart
     console.log('[OrganizationalPulse] Fetching impacts for date range:', { start, end, timeRange });
     const impacts = await this.impactService.getImpacts(tenantId, start, end);
+
+    // Calculate total revenue loss from all business impacts
+    // totalLoss includes: estimated revenue loss, direct costs (engineering time),
+    // indirect costs (support), opportunity cost, and reputation impact
+    // See BusinessImpactService.getTotalRevenueLoss() and estimateLoss() for calculation details
     const totalLoss = await this.impactService.getTotalRevenueLoss(tenantId, start, end);
     console.log('[OrganizationalPulse] Business impacts:', impacts.length, 'Total loss:', totalLoss);
 
@@ -139,10 +144,16 @@ export class DashboardController {
     // Get team signals breakdown
     const teamSignals = this.getTeamSignals(metricData);
 
-    // Get recent signals (timeline events)
+    // Get recent signals (timeline events) grouped by source
     console.log('[OrganizationalPulse] Fetching recent signals for tenant:', tenantId);
     const recentSignals = await this.getRecentSignals(tenantId, end);
-    console.log('[OrganizationalPulse] Recent signals found:', recentSignals.length);
+    const totalSignals = recentSignals.jira.length + recentSignals.servicenow.length + recentSignals.slack.length + recentSignals.teams.length;
+    console.log('[OrganizationalPulse] Recent signals found:', totalSignals, {
+      jira: recentSignals.jira.length,
+      servicenow: recentSignals.servicenow.length,
+      slack: recentSignals.slack.length,
+      teams: recentSignals.teams.length,
+    });
 
     // Get signal distribution by theme
     const signalDistribution = await this.getSignalDistributionByTheme(tenantId, start, end);
@@ -165,6 +176,9 @@ export class DashboardController {
       businessEscalations: {
         chartData: escalationsByMonth,
         totalCount: impacts.length,
+        // totalLoss: Sum of estimated revenue loss across all business impacts in the period
+        // This includes revenue loss from incidents, downtime, bugs, customer impact, etc.
+        // Calculated based on: duration, affected customers, severity, and business context
         totalLoss: Math.round(parseFloat(totalLoss.total.toString()) * 100) / 100,
       },
       teamSignals: teamSignals,
@@ -637,11 +651,12 @@ export class DashboardController {
   }
 
   private calculateStrategicAlignment(metrics: any[]) {
+    // Map actual metric keys to strategic categories
     const categories = {
-      incident_management: ['incident_resolution_time', 'mttr', 'incident_volume'],
-      team_productivity: ['team_velocity', 'issue_throughput', 'cycle_time'],
-      communication: ['response_time', 'collaboration_index'],
-      quality: ['defect_density', 'rework_rate'],
+      incident_management: ['incident_resolution_time', 'mttr', 'incident_volume', 'critical_incidents_rate'],
+      team_productivity: ['team_velocity', 'issue_throughput', 'cycle_time', 'issue_backlog_count', 'deployment_frequency'],
+      communication: ['response_time', 'collaboration_index', 'team_engagement'],
+      quality: ['defect_density', 'rework_rate', 'deployment_frequency'],
       engagement: ['team_engagement'],
     };
 
@@ -798,21 +813,59 @@ export class DashboardController {
     };
   }
 
-  private async getRecentSignals(tenantId: number, endDate: Date): Promise<Array<{
-    id: number;
-    signalType: string;
-    title: string;
-    description: string;
-    severity: 'critical' | 'high' | 'medium' | 'low';
-    confidenceScore: number;
-    status: string;
-    timestamp: Date;
-    category?: string;
-    affectedEntities: any;
-  }>> {
+  private async getRecentSignals(tenantId: number, endDate: Date): Promise<{
+    jira: Array<{
+      id: number;
+      signalType: string;
+      title: string;
+      description: string;
+      severity: 'critical' | 'high' | 'medium' | 'low';
+      confidenceScore: number;
+      status: string;
+      timestamp: Date;
+      category?: string;
+      affectedEntities: any;
+    }>;
+    servicenow: Array<{
+      id: number;
+      signalType: string;
+      title: string;
+      description: string;
+      severity: 'critical' | 'high' | 'medium' | 'low';
+      confidenceScore: number;
+      status: string;
+      timestamp: Date;
+      category?: string;
+      affectedEntities: any;
+    }>;
+    slack: Array<{
+      id: number;
+      signalType: string;
+      title: string;
+      description: string;
+      severity: 'critical' | 'high' | 'medium' | 'low';
+      confidenceScore: number;
+      status: string;
+      timestamp: Date;
+      category?: string;
+      affectedEntities: any;
+    }>;
+    teams: Array<{
+      id: number;
+      signalType: string;
+      title: string;
+      description: string;
+      severity: 'critical' | 'high' | 'medium' | 'low';
+      confidenceScore: number;
+      status: string;
+      timestamp: Date;
+      category?: string;
+      affectedEntities: any;
+    }>;
+  }> {
     console.log('[getRecentSignals] Querying weak signals for tenant:', tenantId);
 
-    // Get recent detected weak signals (last 15)
+    // Get recent detected weak signals (last 60 to ensure we have enough for each source)
     const weakSignals = await this.weakSignalRepository.find({
       where: {
         tenantId,
@@ -820,7 +873,7 @@ export class DashboardController {
       order: {
         detectedAt: 'DESC',
       },
-      take: 15,
+      take: 60,
     });
 
     console.log('[getRecentSignals] Found weak signals:', weakSignals.length);
@@ -833,7 +886,8 @@ export class DashboardController {
       });
     }
 
-    return weakSignals.map(signal => ({
+    // Map signals to common format
+    const mappedSignals = weakSignals.map(signal => ({
       id: signal.id,
       signalType: signal.signalType,
       title: signal.title,
@@ -844,7 +898,60 @@ export class DashboardController {
       timestamp: signal.detectedAt,
       category: signal.category || undefined,
       affectedEntities: signal.affectedEntities,
+      source: this.extractSourceFromSignal(signal),
     }));
+
+    // Group signals by source and take top 15 per source
+    const jiraSignals = mappedSignals.filter(s => s.source === 'jira').slice(0, 15);
+    const servicenowSignals = mappedSignals.filter(s => s.source === 'servicenow').slice(0, 15);
+    const slackSignals = mappedSignals.filter(s => s.source === 'slack').slice(0, 15);
+    const teamsSignals = mappedSignals.filter(s => s.source === 'teams').slice(0, 15);
+
+    console.log('[getRecentSignals] Grouped signals:', {
+      jira: jiraSignals.length,
+      servicenow: servicenowSignals.length,
+      slack: slackSignals.length,
+      teams: teamsSignals.length,
+    });
+
+    // Remove source property before returning
+    const removeSource = (signals: any[]) => signals.map(({ source, ...rest }) => rest);
+
+    return {
+      jira: removeSource(jiraSignals),
+      servicenow: removeSource(servicenowSignals),
+      slack: removeSource(slackSignals),
+      teams: removeSource(teamsSignals),
+    };
+  }
+
+  private extractSourceFromSignal(signal: any): 'jira' | 'servicenow' | 'slack' | 'teams' {
+    // Extract source from affectedEntities or category
+    if (signal.affectedEntities) {
+      const entities = signal.affectedEntities;
+
+      // Check for source indicators in affected entities
+      if (entities.jiraIssues && entities.jiraIssues.length > 0) return 'jira';
+      if (entities.incidents && entities.incidents.length > 0) return 'servicenow';
+      if (entities.slackMessages && entities.slackMessages.length > 0) return 'slack';
+      if (entities.teamsMessages && entities.teamsMessages.length > 0) return 'teams';
+
+      // Check string-based entity keys
+      if (entities.issues) return 'jira';
+      if (entities.serviceNowIncidents) return 'servicenow';
+    }
+
+    // Fallback: try to infer from category or description
+    const category = (signal.category || '').toLowerCase();
+    const description = (signal.description || '').toLowerCase();
+
+    if (category.includes('jira') || description.includes('jira')) return 'jira';
+    if (category.includes('servicenow') || category.includes('incident')) return 'servicenow';
+    if (category.includes('slack')) return 'slack';
+    if (category.includes('teams')) return 'teams';
+
+    // Default to jira if uncertain
+    return 'jira';
   }
 
   private async getSignalDistributionByTheme(

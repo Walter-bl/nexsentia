@@ -117,12 +117,9 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
   }
 
   // Get project references
-  console.log(`Available projects: ${projects.map(p => p.jiraProjectKey).join(', ')}`);
   const prodProject = projects.find((p) => p.jiraProjectKey === 'PROD');
   const platformProject = projects.find((p) => p.jiraProjectKey === 'PLATFORM' || p.jiraProjectKey === 'ENG');
   const opsProject = projects.find((p) => p.jiraProjectKey === 'OPS' || p.jiraProjectKey === 'SUP');
-
-  console.log(`✓ Found projects: PROD=${prodProject?.id}, PLATFORM=${platformProject?.id}, OPS=${opsProject?.id}`);
 
   // ============================================
   // Jira Issues - Using Refined Dataset
