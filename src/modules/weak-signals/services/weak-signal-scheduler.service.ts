@@ -44,12 +44,16 @@ export class WeakSignalSchedulerService implements OnModuleInit {
 
   /**
    * Initialize the dynamic cron job when the module loads
+   * Add a delay to ensure TypeORM has fully initialized all entity metadata
    */
-  onModuleInit() {
+  async onModuleInit() {
     if (!this.isEnabled) {
       this.logger.log('Weak signal detection cron job is disabled');
       return;
     }
+
+    // Wait for TypeORM to fully initialize (5 seconds delay)
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     try {
       const job = new CronJob(this.cronSchedule, () => {

@@ -121,7 +121,7 @@ export async function seedServiceNowData(dataSource: DataSource, tenantId: numbe
   const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
 
   // Generate 991 additional incidents (1000 total - 9 existing)
-  // Strategy: Create 40% recent (0-30 days), 30% mid (30-60 days), 30% old (60-90 days)
+  // CREATE ACCELERATION PATTERN: 60% recent, 25% mid, 15% old
   for (let i = 0; i < 991; i++) {
     const template = incidentTemplates[Math.floor(Math.random() * incidentTemplates.length)];
     const state = states[Math.floor(Math.random() * states.length)];
@@ -129,16 +129,16 @@ export async function seedServiceNowData(dataSource: DataSource, tenantId: numbe
     const assignedUser = users[Math.floor(Math.random() * users.length)];
     const caller = users[Math.floor(Math.random() * users.length)];
 
-    // Generate timestamps - deterministic distribution across time periods
+    // Generate timestamps with ACCELERATION
     let daysAgo;
-    if (i < 400) {
-      // First 400 incidents: 0-30 days ago (recent)
+    if (i < 595) {
+      // 60% incidents in last 30 days (HIGH recent activity - ACCELERATION!)
       daysAgo = Math.floor(Math.random() * 30);
-    } else if (i < 700) {
-      // Next 300 incidents: 30-60 days ago (mid)
+    } else if (i < 843) {
+      // 25% incidents in 30-60 days ago (moderate activity)
       daysAgo = Math.floor(Math.random() * 30) + 30;
     } else {
-      // Last 291 incidents: 60-90 days ago (old)
+      // 15% incidents in 60-90 days ago (LOW baseline - this creates the acceleration!)
       daysAgo = Math.floor(Math.random() * 30) + 60;
     }
     const hoursOffset = Math.floor(Math.random() * 24);
@@ -542,9 +542,12 @@ export async function seedServiceNowData(dataSource: DataSource, tenantId: numbe
     impact: incident.impact,
     category: incident.category,
     subcategory: incident.subcategory,
-    assignmentGroup: incident.assignmentGroup,
+    assignmentGroup: `group_${incident.assignmentGroup.toLowerCase().replace(/\s+/g, '_')}`,
+    assignmentGroupName: incident.assignmentGroup, // Use the actual team name from refined data
     assignedTo: incident.assignedTo,
+    assignedToName: incident.assignedTo.split('@')[0].replace('.', ' '), // Extract name from email
     caller: incident.caller,
+    callerName: incident.caller.split('@')[0].replace('.', ' '), // Extract name from email
     openedAt: new Date(incident.opened),
     updatedAt: new Date(incident.updated),
     resolvedAt: incident.resolved ? new Date(incident.resolved) : null,

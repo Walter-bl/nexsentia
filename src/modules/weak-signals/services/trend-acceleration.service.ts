@@ -4,6 +4,8 @@ import { Repository, MoreThan, Between } from 'typeorm';
 import { MetricValue } from '../../kpi/entities/metric-value.entity';
 import { JiraIssue } from '../../jira/entities/jira-issue.entity';
 import { ServiceNowIncident } from '../../servicenow/entities/servicenow-incident.entity';
+import { SlackMessage } from '../../slack/entities/slack-message.entity';
+import { TeamsMessage } from '../../teams/entities/teams-message.entity';
 import { TimelineEvent } from '../../timeline/entities/timeline-event.entity';
 
 export interface TrendAcceleration {
@@ -38,6 +40,10 @@ export class TrendAccelerationService {
     private readonly jiraIssueRepository: Repository<JiraIssue>,
     @InjectRepository(ServiceNowIncident)
     private readonly serviceNowIncidentRepository: Repository<ServiceNowIncident>,
+    @InjectRepository(SlackMessage)
+    private readonly slackMessageRepository: Repository<SlackMessage>,
+    @InjectRepository(TeamsMessage)
+    private readonly teamsMessageRepository: Repository<TeamsMessage>,
     @InjectRepository(TimelineEvent)
     private readonly timelineEventRepository: Repository<TimelineEvent>,
   ) {}
@@ -51,14 +57,15 @@ export class TrendAccelerationService {
     const accelerations: TrendAcceleration[] = [];
 
     // Analyze different types of metrics
-    const [metricAccelerations, issueAccelerations, incidentAccelerations, eventAccelerations] = await Promise.all([
+    const [metricAccelerations, issueAccelerations, incidentAccelerations, communicationAccelerations, eventAccelerations] = await Promise.all([
       this.analyzeMetricTrends(tenantId, daysBack),
       this.analyzeIssueTrends(tenantId, daysBack),
       this.analyzeIncidentTrends(tenantId, daysBack),
+      this.analyzeCommunicationTrends(tenantId, daysBack),
       this.analyzeEventTrends(tenantId, daysBack),
     ]);
 
-    accelerations.push(...metricAccelerations, ...issueAccelerations, ...incidentAccelerations, ...eventAccelerations);
+    accelerations.push(...metricAccelerations, ...issueAccelerations, ...incidentAccelerations, ...communicationAccelerations, ...eventAccelerations);
 
     // Sort by severity and confidence
     accelerations.sort((a, b) => {
@@ -212,6 +219,83 @@ export class TrendAccelerationService {
 
       if (p1Acceleration) {
         accelerations.push(p1Acceleration);
+      }
+    }
+
+    return accelerations;
+  }
+
+  /**
+   * Analyze communication (Slack/Teams) trends
+   */
+  private async analyzeCommunicationTrends(tenantId: number, daysBack: number): Promise<TrendAcceleration[]> {
+    const accelerations: TrendAcceleration[] = [];
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - daysBack);
+
+    const [slackMessages, teamsMessages] = await Promise.all([
+      this.slackMessageRepository.find({
+        where: {
+          tenantId,
+          slackCreatedAt: MoreThan(startDate),
+        },
+        order: { slackCreatedAt: 'ASC' },
+      }),
+      this.teamsMessageRepository.find({
+        where: {
+          tenantId,
+          createdDateTime: MoreThan(startDate),
+        },
+        order: { createdDateTime: 'ASC' },
+      }),
+    ]);
+
+    // Analyze Slack message rate
+    if (slackMessages.length > 10) {
+      const slackDailyCounts = this.aggregateByDay(slackMessages.map(m => m.slackCreatedAt || m.createdAt));
+      const slackAcceleration = this.detectAccelerationInTimeSeries(
+        slackDailyCounts,
+        'slack_message_rate',
+        'Slack Message Activity Rate',
+        'slack'
+      );
+
+      if (slackAcceleration) {
+        accelerations.push(slackAcceleration);
+      }
+    }
+
+    // Analyze Teams message rate
+    if (teamsMessages.length > 10) {
+      const teamsDailyCounts = this.aggregateByDay(teamsMessages.map(m => m.createdDateTime || m.createdAt));
+      const teamsAcceleration = this.detectAccelerationInTimeSeries(
+        teamsDailyCounts,
+        'teams_message_rate',
+        'Teams Message Activity Rate',
+        'teams'
+      );
+
+      if (teamsAcceleration) {
+        accelerations.push(teamsAcceleration);
+      }
+    }
+
+    // Analyze combined communication activity
+    if (slackMessages.length + teamsMessages.length > 10) {
+      const allMessages = [
+        ...slackMessages.map(m => m.slackCreatedAt || m.createdAt),
+        ...teamsMessages.map(m => m.createdDateTime || m.createdAt),
+      ];
+      const combinedDailyCounts = this.aggregateByDay(allMessages);
+      const combinedAcceleration = this.detectAccelerationInTimeSeries(
+        combinedDailyCounts,
+        'communication_activity_rate',
+        'Overall Communication Activity Rate',
+        'slack' // Use slack as primary source for combined communication
+      );
+
+      if (combinedAcceleration) {
+        accelerations.push(combinedAcceleration);
       }
     }
 

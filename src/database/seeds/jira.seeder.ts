@@ -153,6 +153,83 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
     components: issue.components?.map((comp, idx) => ({ id: `comp_${idx}`, name: comp })),
   }));
 
+  // Generate additional Jira issues to create trend acceleration
+  // Strategy: Create MORE issues in recent 30 days to trigger acceleration detection
+  const additionalJiraIssues = [];
+  const now = new Date();
+  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+
+  const issueSummaries = [
+    'API endpoint performance degradation',
+    'Memory leak in background worker',
+    'Database connection timeout',
+    'Cache invalidation issue',
+    'Session management bug',
+    'File upload failing for large files',
+    'Email notification delay',
+    'Search results incorrect',
+    'Payment processing error',
+    'User authentication timeout',
+    'Dashboard loading slowly',
+    'Export functionality broken',
+    'Mobile app crash on startup',
+    'Push notification not sent',
+    'Data sync delay detected',
+  ];
+
+  const issueTypes = ['bug', 'bug', 'bug', 'story', 'task'];
+  const statuses = ['open', 'open', 'in_progress', 'in_progress', 'done', 'done'];
+  const priorities = ['low', 'low', 'medium', 'medium', 'high', 'critical'];
+
+  // Generate 100 additional issues with ACCELERATION pattern
+  for (let i = 0; i < 100; i++) {
+    let daysAgo;
+    // CREATE ACCELERATION: 60% in last 30 days (MORE recent activity)
+    if (i < 60) {
+      // 60 issues in last 30 days (HIGH activity)
+      daysAgo = Math.floor(Math.random() * 30);
+    } else if (i < 85) {
+      // 25 issues in 30-60 days ago (MODERATE activity)
+      daysAgo = Math.floor(Math.random() * 30) + 30;
+    } else {
+      // 15 issues in 60-90 days ago (LOW baseline activity)
+      daysAgo = Math.floor(Math.random() * 30) + 60;
+    }
+
+    const hoursOffset = Math.floor(Math.random() * 24);
+    const minutesOffset = Math.floor(Math.random() * 60);
+    const createdDate = new Date(ninetyDaysAgo);
+    createdDate.setDate(createdDate.getDate() + daysAgo);
+    createdDate.setHours(hoursOffset);
+    createdDate.setMinutes(minutesOffset);
+
+    const summary = issueSummaries[Math.floor(Math.random() * issueSummaries.length)];
+    const type = issueTypes[Math.floor(Math.random() * issueTypes.length)];
+    const status = statuses[Math.floor(Math.random() * statuses.length)];
+    const priority = priorities[Math.floor(Math.random() * priorities.length)];
+
+    const project = i % 3 === 0 ? prodProject : i % 3 === 1 ? platformProject : opsProject;
+
+    additionalJiraIssues.push({
+      projectId: project!.id,
+      jiraIssueId: `issue_gen_${50100 + i}`,
+      jiraIssueKey: `GEN-${1000 + i}`,
+      summary: `${summary} [auto-gen #${i + 1}]`,
+      description: `Auto-generated issue for testing: ${summary}`,
+      issueType: type,
+      status: status,
+      priority: priority,
+      assigneeAccountId: `user_00${(i % 5) + 1}`,
+      assigneeDisplayName: `Developer ${(i % 5) + 1}`,
+      reporterAccountId: 'user_001',
+      reporterDisplayName: 'System Reporter',
+      jiraCreatedAt: createdDate,
+      jiraUpdatedAt: new Date(),
+      resolvedAt: status === 'done' ? new Date(createdDate.getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000) : undefined,
+      storyPoints: type === 'story' ? Math.floor(Math.random() * 8) + 1 : undefined,
+    });
+  }
+
   // Original demo issues for backward compatibility
   const originalDemoIssues = [
     // Production incidents
@@ -497,8 +574,8 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
     },
   ];
 
-  // Combine refined issues with original demo issues
-  const allIssuesData = [...issuesData, ...originalDemoIssues];
+  // Combine refined issues, original demo issues, and additional generated issues
+  const allIssuesData = [...issuesData, ...originalDemoIssues, ...additionalJiraIssues];
 
   // Create issues in database
   for (const issueData of allIssuesData) {

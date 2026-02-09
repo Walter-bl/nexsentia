@@ -165,6 +165,7 @@ export async function seedSlackData(dataSource: DataSource, tenantId: number): P
   const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
 
   // Generate 985 additional messages (1000 total - 15 existing)
+  // CREATE ACCELERATION PATTERN: MORE recent messages to trigger trend detection
   for (let i = 0; i < 985; i++) {
     const channelIndex = i % 3;
     let channel: SlackChannel | undefined;
@@ -185,17 +186,16 @@ export async function seedSlackData(dataSource: DataSource, tenantId: number): P
     const text = templates[Math.floor(Math.random() * templates.length)];
     const user = users[Math.floor(Math.random() * users.length)];
 
-    // Generate timestamp within last 90 days - with more activity in recent periods
+    // Generate timestamp with ACCELERATION: MORE recent activity
     let daysAgo;
-    const timeDistribution = Math.random();
-    if (timeDistribution < 0.50) {
-      // 50% of messages in last 30 days (recent, high engagement)
+    if (i < 590) {
+      // 60% of messages in last 30 days (HIGH recent engagement - ACCELERATION!)
       daysAgo = Math.floor(Math.random() * 30);
-    } else if (timeDistribution < 0.75) {
+    } else if (i < 837) {
       // 25% of messages in 30-60 days ago (moderate engagement)
       daysAgo = Math.floor(Math.random() * 30) + 30;
     } else {
-      // 25% of messages in 60-90 days ago (lower engagement)
+      // 15% of messages in 60-90 days ago (LOW baseline - this creates the acceleration!)
       daysAgo = Math.floor(Math.random() * 30) + 60;
     }
 

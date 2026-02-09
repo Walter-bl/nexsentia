@@ -195,6 +195,7 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
   const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
 
   // Generate 990 additional messages (1000 total - 10 existing)
+  // CREATE ACCELERATION PATTERN: MORE recent messages to trigger trend detection
   for (let i = 0; i < 990; i++) {
     const channelIndex = i % 3;
     let channel: TeamsChannel | undefined;
@@ -227,17 +228,16 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
     const user = users[Math.floor(Math.random() * users.length)];
     const importance = importanceLevels[Math.floor(Math.random() * importanceLevels.length)];
 
-    // Generate timestamp within last 90 days - with more activity in recent periods
+    // Generate timestamp with ACCELERATION: MORE recent activity
     let daysAgo;
-    const timeDistribution = Math.random();
-    if (timeDistribution < 0.50) {
-      // 50% of messages in last 30 days (recent, high engagement)
+    if (i < 594) {
+      // 60% of messages in last 30 days (HIGH recent engagement - ACCELERATION!)
       daysAgo = Math.floor(Math.random() * 30);
-    } else if (timeDistribution < 0.75) {
+    } else if (i < 841) {
       // 25% of messages in 30-60 days ago (moderate engagement)
       daysAgo = Math.floor(Math.random() * 30) + 30;
     } else {
-      // 25% of messages in 60-90 days ago (lower engagement)
+      // 15% of messages in 60-90 days ago (LOW baseline - this creates the acceleration!)
       daysAgo = Math.floor(Math.random() * 30) + 60;
     }
 

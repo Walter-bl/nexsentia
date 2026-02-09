@@ -127,15 +127,13 @@ export class DashboardController {
     console.log('[OrganizationalPulse] Fetching impacts for date range:', { start, end, timeRange });
     const impacts = await this.impactService.getImpacts(tenantId, start, end);
 
-    // Calculate total revenue loss from all business impacts
-    // totalLoss includes: estimated revenue loss, direct costs (engineering time),
-    // indirect costs (support), opportunity cost, and reputation impact
-    // See BusinessImpactService.getTotalRevenueLoss() and estimateLoss() for calculation details
-    const totalLoss = await this.impactService.getTotalRevenueLoss(tenantId, start, end);
-    console.log('[OrganizationalPulse] Business impacts:', impacts.length, 'Total loss:', totalLoss);
+    // Calculate total time loss in hours from all business impacts
+    // Time loss is calculated from incident/issue duration across all impacts
+    const totalHoursLost = this.calculateTotalHoursLost(impacts);
+    console.log('[OrganizationalPulse] Business impacts:', impacts.length, 'Total hours lost:', totalHoursLost);
 
     // Group impacts by month for business escalations chart
-    const escalationsByMonth = this.groupImpactsByMonth(impacts, start, end);
+    const escalationsByMonth = this.groupImpactsByMonthWithHours(impacts, start, end);
     console.log('[OrganizationalPulse] Escalations by month:', JSON.stringify(escalationsByMonth, null, 2));
 
     // Calculate strategic alignment metrics
@@ -176,10 +174,10 @@ export class DashboardController {
       businessEscalations: {
         chartData: escalationsByMonth,
         totalCount: impacts.length,
-        // totalLoss: Sum of estimated revenue loss across all business impacts in the period
-        // This includes revenue loss from incidents, downtime, bugs, customer impact, etc.
-        // Calculated based on: duration, affected customers, severity, and business context
-        totalLoss: Math.round(parseFloat(totalLoss.total.toString()) * 100) / 100,
+        // totalHoursLost: Sum of time lost in hours across all business impacts in the period
+        // This includes incident resolution time, downtime duration, and time to fix bugs
+        // Calculated from durationMinutes field converted to hours
+        totalHoursLost: Math.round(totalHoursLost * 10) / 10, // Round to 1 decimal place
       },
       teamSignals: teamSignals,
       recentSignals: recentSignals,
@@ -611,13 +609,20 @@ export class DashboardController {
     return { start, end };
   }
 
-  private groupImpactsByMonth(impacts: any[], start: Date, end: Date) {
+  private calculateTotalHoursLost(impacts: any[]): number {
+    return impacts.reduce((total, impact) => {
+      const durationMinutes = parseFloat(impact.durationMinutes) || 0;
+      return total + (durationMinutes / 60);
+    }, 0);
+  }
+
+  private groupImpactsByMonthWithHours(impacts: any[], start: Date, end: Date) {
     const monthlyData = [];
     const current = new Date(start.getFullYear(), start.getMonth(), 1);
     const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
 
-    console.log('[groupImpactsByMonth] Processing', impacts.length, 'impacts from', start, 'to', end);
-    console.log('[groupImpactsByMonth] Month range:', current, 'to', endMonth);
+    console.log('[groupImpactsByMonthWithHours] Processing', impacts.length, 'impacts from', start, 'to', end);
+    console.log('[groupImpactsByMonthWithHours] Month range:', current, 'to', endMonth);
 
     while (current <= endMonth) {
       const monthStart = new Date(current);
@@ -628,14 +633,18 @@ export class DashboardController {
         return impactDate >= monthStart && impactDate <= monthEnd;
       });
 
-      console.log('[groupImpactsByMonth]', monthStart.toISOString().slice(0, 7), ':', monthImpacts.length, 'impacts');
+      console.log('[groupImpactsByMonthWithHours]', monthStart.toISOString().slice(0, 7), ':', monthImpacts.length, 'impacts');
 
-      const monthTotalLoss = monthImpacts.reduce((sum, i) => sum + (parseFloat(i.estimatedRevenueLoss) || 0), 0);
+      // Calculate total hours lost for the month
+      const monthTotalHours = monthImpacts.reduce((sum, i) => {
+        const durationMinutes = parseFloat(i.durationMinutes) || 0;
+        return sum + (durationMinutes / 60);
+      }, 0);
 
       monthlyData.push({
         month: monthStart.toISOString().slice(0, 7),
         count: monthImpacts.length,
-        totalLoss: Math.round(monthTotalLoss * 100) / 100,
+        totalHoursLost: Math.round(monthTotalHours * 10) / 10, // Round to 1 decimal place
         bySeverity: {
           critical: monthImpacts.filter(i => i.severity === 'critical').length,
           high: monthImpacts.filter(i => i.severity === 'high').length,
@@ -660,7 +669,16 @@ export class DashboardController {
       engagement: ['team_engagement'],
     };
 
-    const categoryScores: Record<string, { score: number; trend: 'up' | 'down' | 'stable'; metricsCount: number }> = {};
+    // Category descriptions for user clarity
+    const categoryDescriptions: Record<string, string> = {
+      incident_management: 'Measures how effectively your team handles and resolves incidents',
+      team_productivity: 'Tracks team output, velocity, and work completion rates',
+      communication: 'Evaluates team collaboration and engagement levels',
+      quality: 'Monitors code quality and deployment success rates',
+      engagement: 'Assesses overall team morale and participation',
+    };
+
+    const categoryScores: Record<string, any> = {};
     let totalScore = 0;
     let categoryCount = 0;
 
@@ -674,10 +692,36 @@ export class DashboardController {
           return sum + score;
         }, 0) / categoryMetrics.length;
 
+        const score = Math.round(categoryScore);
+
+        // Determine overall status
+        let status: 'excellent' | 'good' | 'warning' | 'critical';
+        if (score >= 90) status = 'excellent';
+        else if (score >= 70) status = 'good';
+        else if (score >= 50) status = 'warning';
+        else status = 'critical';
+
+        // Build detailed metrics array
+        const detailedMetrics = categoryMetrics.map(m => ({
+          key: m.key,
+          name: m.name,
+          value: m.value,
+          unit: m.unit || '',
+          status: m.status,
+          threshold: m.threshold,
+        }));
+
+        // Generate insight and recommendation based on status
+        const { insight, recommendation } = this.generateCategoryInsight(category, detailedMetrics, status);
+
         categoryScores[category] = {
-          score: Math.round(categoryScore),
+          score,
+          status,
           trend: this.calculateCategoryTrend(categoryMetrics),
-          metricsCount: categoryMetrics.length,
+          description: categoryDescriptions[category],
+          metrics: detailedMetrics,
+          insight,
+          recommendation,
         };
 
         totalScore += categoryScore;
@@ -689,6 +733,100 @@ export class DashboardController {
       overall: categoryCount > 0 ? Math.round(totalScore / categoryCount) : 0,
       categories: categoryScores,
     };
+  }
+
+  /**
+   * Generate actionable insights and recommendations for a category
+   */
+  private generateCategoryInsight(
+    category: string,
+    metrics: any[],
+    status: 'excellent' | 'good' | 'warning' | 'critical',
+  ): { insight: string; recommendation: string } {
+    // Find the worst performing metric (critical or warning)
+    const criticalMetric = metrics.find(m => m.status === 'critical');
+    const warningMetric = metrics.find(m => m.status === 'warning');
+    const problemMetric = criticalMetric || warningMetric;
+
+    if (status === 'excellent') {
+      return {
+        insight: `All metrics in ${category.replace(/_/g, ' ')} are performing excellently. Keep up the good work!`,
+        recommendation: 'Continue current practices and monitor for any changes in trends.',
+      };
+    }
+
+    if (status === 'good') {
+      const insights: string[] = [];
+      if (problemMetric) {
+        insights.push(`${problemMetric.name} (${problemMetric.value}${problemMetric.unit}) needs attention.`);
+      } else {
+        insights.push(`Performance is solid but has room for improvement.`);
+      }
+
+      return {
+        insight: insights.join(' '),
+        recommendation: problemMetric
+          ? this.getMetricRecommendation(problemMetric.key, problemMetric.status)
+          : 'Look for opportunities to optimize existing processes.',
+      };
+    }
+
+    if (status === 'warning' && problemMetric) {
+      return {
+        insight: `${problemMetric.name} is ${problemMetric.status}. Current value: ${problemMetric.value}${problemMetric.unit}${problemMetric.threshold ? `, threshold: ${JSON.stringify(problemMetric.threshold)}` : ''}.`,
+        recommendation: this.getMetricRecommendation(problemMetric.key, problemMetric.status),
+      };
+    }
+
+    if (status === 'critical' && problemMetric) {
+      return {
+        insight: `CRITICAL: ${problemMetric.name} requires immediate attention. Current value: ${problemMetric.value}${problemMetric.unit}.`,
+        recommendation: `Priority action needed: ${this.getMetricRecommendation(problemMetric.key, 'critical')}`,
+      };
+    }
+
+    return {
+      insight: `${category.replace(/_/g, ' ')} performance needs improvement.`,
+      recommendation: 'Review all metrics in this category and identify areas for optimization.',
+    };
+  }
+
+  /**
+   * Get specific recommendations based on metric type
+   */
+  private getMetricRecommendation(metricKey: string, status: string): string {
+    const recommendations: Record<string, Record<string, string>> = {
+      incident_resolution_time: {
+        warning: 'Consider implementing automated incident triage or improving runbook documentation.',
+        critical: 'Set up on-call rotations and invest in incident management training. Review current escalation processes.',
+      },
+      critical_incidents_rate: {
+        warning: 'Increase monitoring coverage and implement proactive alerting to catch issues earlier.',
+        critical: 'Conduct root cause analysis for recurring incidents. Implement preventive measures and improve testing.',
+      },
+      team_engagement: {
+        warning: 'Schedule team retrospectives and gather feedback on potential blockers or morale issues.',
+        critical: 'Urgent: Address team burnout. Review workload distribution and consider process improvements.',
+      },
+      issue_backlog_count: {
+        warning: 'Prioritize backlog grooming sessions. Consider increasing sprint capacity or reducing scope.',
+        critical: 'Backlog is overwhelming. Implement aggressive prioritization and consider archiving stale issues.',
+      },
+      deployment_frequency: {
+        warning: 'Identify deployment bottlenecks. Consider improving CI/CD pipeline efficiency.',
+        critical: 'Deployment velocity is too low. Review release process and eliminate manual steps.',
+      },
+    };
+
+    const metricRecs = recommendations[metricKey];
+    if (metricRecs && metricRecs[status]) {
+      return metricRecs[status];
+    }
+
+    // Generic fallback
+    return status === 'critical'
+      ? 'Immediate investigation and action required to bring this metric back to healthy levels.'
+      : 'Monitor closely and implement process improvements to address this metric.';
   }
 
   private calculateCategoryTrend(metrics: any[]): 'up' | 'down' | 'stable' {
@@ -863,31 +1001,57 @@ export class DashboardController {
       affectedEntities: any;
     }>;
   }> {
-    console.log('[getRecentSignals] Querying weak signals for tenant:', tenantId);
+    console.log('[getRecentSignals] Querying weak signals by category for tenant:', tenantId);
 
-    // Get recent detected weak signals (last 60 to ensure we have enough for each source)
-    const weakSignals = await this.weakSignalRepository.find({
-      where: {
-        tenantId,
-      },
-      order: {
-        detectedAt: 'DESC',
-      },
-      take: 60,
+    // Query each category separately to ensure representation from all sources
+    // This prevents one high-volume source from dominating the results
+    const [engineeringSignals, operationsSignals, communicationSignals] = await Promise.all([
+      // Engineering (Jira) signals
+      this.weakSignalRepository.find({
+        where: {
+          tenantId,
+          category: 'Engineering',
+        },
+        order: {
+          detectedAt: 'DESC',
+        },
+        take: 15,
+      }),
+      // Operations (ServiceNow) signals
+      this.weakSignalRepository.find({
+        where: {
+          tenantId,
+          category: 'Operations',
+        },
+        order: {
+          detectedAt: 'DESC',
+        },
+        take: 15,
+      }),
+      // Communication (Slack/Teams) signals
+      this.weakSignalRepository.find({
+        where: {
+          tenantId,
+          category: 'Communication',
+        },
+        order: {
+          detectedAt: 'DESC',
+        },
+        take: 15,
+      }),
+    ]);
+
+    console.log('[getRecentSignals] Found signals by category:', {
+      engineering: engineeringSignals.length,
+      operations: operationsSignals.length,
+      communication: communicationSignals.length,
     });
 
-    console.log('[getRecentSignals] Found weak signals:', weakSignals.length);
-    if (weakSignals.length > 0) {
-      console.log('[getRecentSignals] First signal:', {
-        id: weakSignals[0].id,
-        type: weakSignals[0].signalType,
-        title: weakSignals[0].title,
-        detectedAt: weakSignals[0].detectedAt,
-      });
-    }
+    // Combine all signals
+    const allSignals = [...engineeringSignals, ...operationsSignals, ...communicationSignals];
 
     // Map signals to common format
-    const mappedSignals = weakSignals.map(signal => ({
+    const mappedSignals = allSignals.map(signal => ({
       id: signal.id,
       signalType: signal.signalType,
       title: signal.title,
@@ -901,13 +1065,25 @@ export class DashboardController {
       source: this.extractSourceFromSignal(signal),
     }));
 
-    // Group signals by source and take top 15 per source
+    // Group signals by source
     const jiraSignals = mappedSignals.filter(s => s.source === 'jira').slice(0, 15);
     const servicenowSignals = mappedSignals.filter(s => s.source === 'servicenow').slice(0, 15);
     const slackSignals = mappedSignals.filter(s => s.source === 'slack').slice(0, 15);
     const teamsSignals = mappedSignals.filter(s => s.source === 'teams').slice(0, 15);
 
-    console.log('[getRecentSignals] Grouped signals:', {
+    console.log('[getRecentSignals] Source extraction sample (first 3 from each category):');
+    console.log('Engineering:', engineeringSignals.slice(0, 3).map(s => ({
+      id: s.id,
+      category: s.category,
+      description: s.description.substring(0, 50),
+    })));
+    console.log('Operations:', operationsSignals.slice(0, 3).map(s => ({
+      id: s.id,
+      category: s.category,
+      description: s.description.substring(0, 50),
+    })));
+
+    console.log('[getRecentSignals] Final grouped signals:', {
       jira: jiraSignals.length,
       servicenow: servicenowSignals.length,
       slack: slackSignals.length,
@@ -926,19 +1102,25 @@ export class DashboardController {
   }
 
   private extractSourceFromSignal(signal: any): 'jira' | 'servicenow' | 'slack' | 'teams' {
-    // Extract source from affectedEntities or category
-    if (signal.affectedEntities) {
-      const entities = signal.affectedEntities;
+    // Extract source from affectedEntities (which is an array of entity objects)
+    if (signal.affectedEntities && Array.isArray(signal.affectedEntities)) {
+      // Check each entity in the array for source identifiers
+      for (const entity of signal.affectedEntities) {
+        const entityId = (entity.id || '').toLowerCase();
+        const entityName = (entity.name || '').toLowerCase();
 
-      // Check for source indicators in affected entities
-      if (entities.jiraIssues && entities.jiraIssues.length > 0) return 'jira';
-      if (entities.incidents && entities.incidents.length > 0) return 'servicenow';
-      if (entities.slackMessages && entities.slackMessages.length > 0) return 'slack';
-      if (entities.teamsMessages && entities.teamsMessages.length > 0) return 'teams';
+        // Direct match on entity id (most reliable)
+        if (entityId === 'jira' || entityId.includes('jira')) return 'jira';
+        if (entityId === 'servicenow' || entityId.includes('servicenow')) return 'servicenow';
+        if (entityId === 'slack' || entityId.includes('slack')) return 'slack';
+        if (entityId === 'teams' || entityId.includes('teams')) return 'teams';
 
-      // Check string-based entity keys
-      if (entities.issues) return 'jira';
-      if (entities.serviceNowIncidents) return 'servicenow';
+        // Match on entity name
+        if (entityName.includes('jira')) return 'jira';
+        if (entityName.includes('servicenow')) return 'servicenow';
+        if (entityName.includes('slack')) return 'slack';
+        if (entityName.includes('teams')) return 'teams';
+      }
     }
 
     // Fallback: try to infer from category or description
@@ -946,12 +1128,22 @@ export class DashboardController {
     const description = (signal.description || '').toLowerCase();
 
     if (category.includes('jira') || description.includes('jira')) return 'jira';
-    if (category.includes('servicenow') || category.includes('incident')) return 'servicenow';
-    if (category.includes('slack')) return 'slack';
-    if (category.includes('teams')) return 'teams';
+    if (category.includes('servicenow') || category.includes('incident') || description.includes('incident')) return 'servicenow';
+    if (category.includes('slack') || description.includes('slack')) return 'slack';
+    if (category.includes('teams') || description.includes('teams')) return 'teams';
 
-    // Default to jira if uncertain
-    return 'jira';
+    // Check signal type - pattern_recurring is typically from ServiceNow
+    if (signal.signalType === 'pattern_recurring' && description.includes('recurring incident pattern')) {
+      return 'servicenow';
+    }
+
+    // trend_acceleration from Jira issue rate
+    if (signal.signalType === 'trend_acceleration' && description.includes('jira')) {
+      return 'jira';
+    }
+
+    // Default to servicenow for recurring patterns, jira for everything else
+    return signal.signalType === 'pattern_recurring' ? 'servicenow' : 'jira';
   }
 
   private async getSignalDistributionByTheme(

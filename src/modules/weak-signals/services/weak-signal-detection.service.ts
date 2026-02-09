@@ -382,6 +382,37 @@ export class WeakSignalDetectionService {
       impactLevel: 'high',
     });
 
+    // Add source-specific entity for proper identification in dashboard
+    if (metricKey.includes('slack')) {
+      entities.push({
+        type: 'system',
+        id: 'slack',
+        name: 'Slack',
+        impactLevel: 'medium',
+      });
+    } else if (metricKey.includes('teams')) {
+      entities.push({
+        type: 'system',
+        id: 'teams',
+        name: 'Teams',
+        impactLevel: 'medium',
+      });
+    } else if (metricKey.includes('jira')) {
+      entities.push({
+        type: 'system',
+        id: 'jira',
+        name: 'Jira',
+        impactLevel: 'medium',
+      });
+    } else if (metricKey.includes('servicenow')) {
+      entities.push({
+        type: 'system',
+        id: 'servicenow',
+        name: 'ServiceNow',
+        impactLevel: 'medium',
+      });
+    }
+
     return entities;
   }
 
@@ -405,6 +436,7 @@ export class WeakSignalDetectionService {
   private categorizeMetric(metricKey: string): string {
     if (metricKey.includes('jira')) return 'Engineering';
     if (metricKey.includes('servicenow') || metricKey.includes('incident')) return 'Operations';
+    if (metricKey.includes('slack') || metricKey.includes('teams') || metricKey.includes('communication')) return 'Communication';
     if (metricKey.includes('event')) return 'Timeline';
     return 'Metrics';
   }
