@@ -195,11 +195,7 @@ export class TeamImpactService {
       }
     });
 
-    // Add default teams if none found
-    if (teams.size === 0) {
-      return ['Engineering', 'DevOps', 'Product', 'Support'];
-    }
-
+    // Return only teams found in actual ingestion data
     return Array.from(teams);
   }
 

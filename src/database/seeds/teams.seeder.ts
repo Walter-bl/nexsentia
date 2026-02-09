@@ -2,6 +2,8 @@ import { DataSource } from 'typeorm';
 import { TeamsConnection } from '../../modules/teams/entities/teams-connection.entity';
 import { TeamsChannel } from '../../modules/teams/entities/teams-channel.entity';
 import { TeamsMessage } from '../../modules/teams/entities/teams-message.entity';
+import { TeamsUser } from '../../modules/teams/entities/teams-user.entity';
+import { refinedTeamsChannels, refinedTeamsUsers, refinedTeamsMessages } from './data/teams-refined.seed';
 
 export async function seedTeamsData(dataSource: DataSource, tenantId: number): Promise<void> {
   const teamsConnectionRepo = dataSource.getRepository(TeamsConnection);
@@ -41,9 +43,18 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
   }
 
   // ============================================
-  // Teams Channels
+  // Teams Channels - Using Refined Dataset
   // ============================================
-  const channelsData = [
+  const channelsData = refinedTeamsChannels.map(channel => ({
+    channelId: channel.teamsChannelId,
+    teamId: channel.teamsTeamId,
+    displayName: channel.displayName,
+    description: channel.description,
+    isFavorite: channel.isFavorite,
+  }));
+
+  // Also keep original demo channels for backward compatibility
+  const originalChannelsData = [
     {
       channelId: 'channel_general_001',
       teamId: 'team_demo_001',
@@ -73,8 +84,11 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
     },
   ];
 
+  // Combine refined and original channels
+  const allChannelsData = [...channelsData, ...originalChannelsData];
+
   const channels: TeamsChannel[] = [];
-  for (const channelData of channelsData) {
+  for (const channelData of allChannelsData) {
     let channel = await teamsChannelRepo.findOne({
       where: { connectionId: teamsConnection.id, channelId: channelData.channelId },
     });
@@ -383,7 +397,29 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
   ];
 
   // Combine original messages with generated ones
-  const allMessages = [...messagesData, ...additionalMessages];
+  // Map refined messages to database format
+  const channelIdMap = new Map(channels.map(ch => [ch.channelId, ch.id]));
+
+  const refinedMessagesData = refinedTeamsMessages.map(msg => ({
+    channelId: channelIdMap.get(msg.teamsChannelId)!,
+    messageId: msg.messageId,
+    teamId: msg.teamId,
+    teamsChannelId: msg.teamsChannelId,
+    teamsUserId: msg.teamsUserId,
+    content: msg.content,
+    contentType: msg.contentType,
+    subject: msg.subject,
+    messageType: msg.messageType,
+    replyToId: msg.replyToId,
+    importance: msg.importance,
+    createdDateTime: new Date(msg.createdDateTime),
+    lastModifiedDateTime: new Date(msg.lastModifiedDateTime),
+    reactions: msg.reactions,
+    mentions: msg.mentions,
+    attachments: msg.attachments,
+  }));
+
+  const allMessages = [...refinedMessagesData, ...messagesData, ...additionalMessages];
 
   for (const messageData of allMessages) {
     let message = await teamsMessageRepo.findOne({

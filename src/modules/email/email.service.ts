@@ -126,6 +126,34 @@ export class EmailService {
     `;
   }
 
+  async sendTestAlertEmail(
+    to: string,
+    title: string,
+    message: string,
+    severity: 'critical' | 'high' | 'medium' | 'low',
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      const response = await this.resend.emails.send({
+        from: `${this.fromName} Alerts <${this.fromEmail}>`,
+        to,
+        subject: `[${severity.toUpperCase()}] ${title}`,
+        html: this.getTestAlertTemplate(title, message, severity),
+      });
+
+      this.logger.log(`Test alert email sent to ${to}`);
+      return {
+        success: true,
+        messageId: response.data?.id || 'unknown',
+      };
+    } catch (error) {
+      this.logger.error(`Failed to send test alert email to ${to}:`, error);
+      return {
+        success: false,
+        error: error.message || 'Failed to send test alert email',
+      };
+    }
+  }
+
   private getPasswordChangedTemplate(firstName: string): string {
     return `
       <!DOCTYPE html>
@@ -144,6 +172,56 @@ export class EmailService {
             <p>Your password has been changed successfully.</p>
             <p>If you didn't make this change, please contact support immediately.</p>
             <div class="footer">
+              <p>© ${new Date().getFullYear()} Nexsentia. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+  }
+
+  private getTestAlertTemplate(title: string, message: string, severity: 'critical' | 'high' | 'medium' | 'low'): string {
+    const severityColors = {
+      critical: '#dc2626',
+      high: '#ea580c',
+      medium: '#f59e0b',
+      low: '#3b82f6',
+    };
+
+    const color = severityColors[severity];
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; }
+            .alert-box { background-color: white; border-left: 4px solid ${color}; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .severity { color: ${color}; font-weight: bold; text-transform: uppercase; font-size: 12px; margin-bottom: 10px; }
+            .title { font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 10px; }
+            .message { color: #4b5563; margin-bottom: 20px; }
+            .badge { display: inline-block; padding: 4px 12px; background-color: ${color}; color: white; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+            .metadata { font-size: 12px; color: #6b7280; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+            .footer { margin-top: 40px; font-size: 12px; color: #666; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="alert-box">
+              <div class="severity">
+                <span class="badge">${severity}</span>
+              </div>
+              <div class="title">${title}</div>
+              <div class="message">${message}</div>
+              <div class="metadata">
+                <p><strong>Alert Type:</strong> Test Alert</p>
+                <p><strong>Triggered:</strong> ${new Date().toLocaleString()}</p>
+                <p><strong>Source:</strong> Manual Test Trigger</p>
+              </div>
+            </div>
+            <div class="footer">
+              <p>This is a test alert from Nexsentia Alert System</p>
               <p>© ${new Date().getFullYear()} Nexsentia. All rights reserved.</p>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import { ServiceNowConnection } from '../../modules/servicenow/entities/servicenow-connection.entity';
 import { ServiceNowIncident } from '../../modules/servicenow/entities/servicenow-incident.entity';
+import { refinedServiceNowIncidents } from './data/servicenow-refined.seed';
 
 export async function seedServiceNowData(dataSource: DataSource, tenantId: number): Promise<void> {
   const serviceNowConnectionRepo = dataSource.getRepository(ServiceNowConnection);
@@ -528,7 +529,36 @@ export async function seedServiceNowData(dataSource: DataSource, tenantId: numbe
   ];
 
   // Combine original incidents with generated ones
-  const allIncidents = [...incidentsData, ...additionalIncidents];
+  // Convert refined incidents to database format
+  const refinedIncidentsData = refinedServiceNowIncidents.map(incident => ({
+    serviceNowConnectionId: serviceNowConnection!.id,
+    number: incident.number,
+    sysId: `sys_${incident.number}`,
+    shortDescription: incident.shortDescription,
+    description: incident.description,
+    state: incident.incidentState,
+    priority: incident.priority,
+    urgency: incident.urgency,
+    impact: incident.impact,
+    category: incident.category,
+    subcategory: incident.subcategory,
+    assignmentGroup: incident.assignmentGroup,
+    assignedTo: incident.assignedTo,
+    caller: incident.caller,
+    openedAt: new Date(incident.opened),
+    updatedAt: new Date(incident.updated),
+    resolvedAt: incident.resolved ? new Date(incident.resolved) : null,
+    closedAt: incident.closed ? new Date(incident.closed) : null,
+    resolutionCode: incident.resolutionCode,
+    resolutionNotes: incident.resolutionNotes,
+    closeNotes: incident.closeNotes,
+    workNotes: incident.workNotes,
+    escalation: incident.escalation,
+    reopenCount: incident.reopenCount,
+    businessService: incident.businessService,
+  }));
+
+  const allIncidents = [...refinedIncidentsData, ...incidentsData, ...additionalIncidents];
 
   for (const incidentData of allIncidents) {
     const existingIncident = await serviceNowIncidentRepo.findOne({

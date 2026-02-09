@@ -3403,6 +3403,32 @@
 								},
 								"description": "Manually trigger alert processing for a specific source type"
 							}
+						},
+						{
+							"name": "Send Test Alert Email",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "X-Tenant-Id",
+										"value": "{{tenant_id}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"test@example.com\",\n  \"title\": \"Test Alert - System Check\",\n  \"message\": \"This is a test alert to verify email delivery is working correctly.\",\n  \"severity\": \"medium\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/alerts/send-test",
+									"host": ["{{base_url}}"],
+									"path": ["alerts", "send-test"]
+								},
+								"description": "Send a test alert email to verify email delivery configuration. Useful for testing email integration without triggering actual alert rules.\n\nSeverity options: critical, high, medium, low"
+							}
 						}
 					]
 				}

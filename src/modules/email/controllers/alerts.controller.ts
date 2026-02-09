@@ -21,6 +21,7 @@ import { AlertHistory } from '../entities/alert-history.entity';
 import { AlertOrchestratorService } from '../services/alert-orchestrator.service';
 import { AlertDeliveryService } from '../services/alert-delivery.service';
 import { AlertRateLimiterService } from '../services/alert-rate-limiter.service';
+import { EmailService } from '../email.service';
 
 @Controller('alerts')
 @UseGuards(JwtAuthGuard)
@@ -35,6 +36,7 @@ export class AlertsController {
     private readonly orchestrator: AlertOrchestratorService,
     private readonly delivery: AlertDeliveryService,
     private readonly rateLimiter: AlertRateLimiterService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -267,6 +269,51 @@ export class AlertsController {
     return {
       success: true,
       ...result,
+    };
+  }
+
+  /**
+   * POST /api/v1/alerts/send-test
+   * Send a test alert email to a specific email address
+   */
+  @Post('send-test')
+  async sendTestEmail(
+    @CurrentTenant() tenantId: number,
+    @CurrentUser() user: any,
+    @Body() body: {
+      email: string;
+      title?: string;
+      message?: string;
+      severity?: 'critical' | 'high' | 'medium' | 'low';
+    },
+  ) {
+    const {
+      email,
+      title = 'Test Alert',
+      message = 'This is a test alert from NexSentia Alert System',
+      severity = 'medium',
+    } = body;
+
+    // Send the test email directly
+    const result = await this.emailService.sendTestAlertEmail(
+      email,
+      title,
+      message,
+      severity,
+    );
+
+    return {
+      success: result.success,
+      message: result.success
+        ? `Test alert sent successfully to ${email}`
+        : `Failed to send test alert: ${result.error}`,
+      email,
+      title,
+      severity,
+      messageId: result.messageId,
+      error: result.error,
+      triggeredBy: user.email || 'system',
+      triggeredAt: new Date().toISOString(),
     };
   }
 }

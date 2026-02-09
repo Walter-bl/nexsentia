@@ -2,6 +2,7 @@ import { DataSource } from 'typeorm';
 import { JiraConnection } from '../../modules/jira/entities/jira-connection.entity';
 import { JiraProject } from '../../modules/jira/entities/jira-project.entity';
 import { JiraIssue } from '../../modules/jira/entities/jira-issue.entity';
+import { refinedJiraIssues } from './data/jira-refined.seed';
 
 export async function seedJiraData(dataSource: DataSource, tenantId: number): Promise<void> {
   const jiraConnectionRepo = dataSource.getRepository(JiraConnection);
@@ -67,29 +68,29 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
     {
       jiraProjectId: 'proj_10001',
       jiraProjectKey: 'PROD',
-      name: 'Production Support',
+      name: 'Production',
       description: 'Production issues and incidents',
       projectTypeKey: 'software',
       leadAccountId: 'user_001',
-      leadDisplayName: 'John Smith',
+      leadDisplayName: 'Sarah Martinez',
     },
     {
       jiraProjectId: 'proj_10002',
-      jiraProjectKey: 'ENG',
-      name: 'Engineering',
-      description: 'Engineering team tasks',
+      jiraProjectKey: 'PLATFORM',
+      name: 'Platform',
+      description: 'Platform engineering and features',
       projectTypeKey: 'software',
       leadAccountId: 'user_001',
-      leadDisplayName: 'John Smith',
+      leadDisplayName: 'Mike Chen',
     },
     {
       jiraProjectId: 'proj_10003',
-      jiraProjectKey: 'SUP',
-      name: 'Customer Support',
-      description: 'Customer support tickets',
-      projectTypeKey: 'service_desk',
+      jiraProjectKey: 'OPS',
+      name: 'Operations',
+      description: 'DevOps and infrastructure tasks',
+      projectTypeKey: 'software',
       leadAccountId: 'user_001',
-      leadDisplayName: 'John Smith',
+      leadDisplayName: 'DevOps Team',
     },
   ];
 
@@ -116,14 +117,47 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
   }
 
   // Get project references
+  console.log(`Available projects: ${projects.map(p => p.jiraProjectKey).join(', ')}`);
   const prodProject = projects.find((p) => p.jiraProjectKey === 'PROD');
-  const engProject = projects.find((p) => p.jiraProjectKey === 'ENG');
-  const supProject = projects.find((p) => p.jiraProjectKey === 'SUP');
+  const platformProject = projects.find((p) => p.jiraProjectKey === 'PLATFORM' || p.jiraProjectKey === 'ENG');
+  const opsProject = projects.find((p) => p.jiraProjectKey === 'OPS' || p.jiraProjectKey === 'SUP');
+
+  console.log(`✓ Found projects: PROD=${prodProject?.id}, PLATFORM=${platformProject?.id}, OPS=${opsProject?.id}`);
 
   // ============================================
-  // Jira Issues
+  // Jira Issues - Using Refined Dataset
   // ============================================
-  const issuesData = [
+  // Map project keys to database IDs
+  const projectKeyToId: Record<string, number> = {
+    'PROD': prodProject!.id,
+    'PLATFORM': platformProject!.id,
+    'OPS': opsProject!.id,
+  };
+
+  // Convert refined issues to database format
+  const issuesData = refinedJiraIssues.map(issue => ({
+    projectId: projectKeyToId[issue.project],
+    jiraIssueId: issue.key,
+    jiraIssueKey: issue.key,
+    summary: issue.summary,
+    description: issue.description,
+    issueType: issue.type.toLowerCase(),
+    status: issue.status.toLowerCase().replace(' ', '_'),
+    priority: issue.priority.toLowerCase(),
+    assigneeAccountId: issue.assignee,
+    assigneeDisplayName: issue.assignee.split('@')[0].replace('.', ' '),
+    reporterAccountId: issue.reporter,
+    reporterDisplayName: issue.reporter.split('@')[0].replace('.', ' '),
+    jiraCreatedAt: new Date(issue.created),
+    jiraUpdatedAt: new Date(issue.updated),
+    resolvedAt: issue.resolved ? new Date(issue.resolved) : undefined,
+    storyPoints: issue.storyPoints || undefined,
+    labels: issue.labels,
+    components: issue.components?.map((comp, idx) => ({ id: `comp_${idx}`, name: comp })),
+  }));
+
+  // Original demo issues for backward compatibility
+  const originalDemoIssues = [
     // Production incidents
     {
       projectId: prodProject!.id,
@@ -177,7 +211,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
     },
     // Engineering stories
     {
-      projectId: engProject!.id,
+      projectId: platformProject!.id,
       jiraIssueId: 'issue_60001',
       jiraIssueKey: 'ENG-567',
       summary: 'Implement real-time notifications system',
@@ -194,7 +228,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       jiraUpdatedAt: new Date(),
     },
     {
-      projectId: engProject!.id,
+      projectId: platformProject!.id,
       jiraIssueId: 'issue_60002',
       jiraIssueKey: 'ENG-589',
       summary: 'Upgrade authentication system to OAuth 2.0',
@@ -263,7 +297,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
     },
     // More Engineering stories
     {
-      projectId: engProject!.id,
+      projectId: platformProject!.id,
       jiraIssueId: 'issue_60003',
       jiraIssueKey: 'ENG-601',
       summary: 'Add multi-factor authentication support',
@@ -280,7 +314,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       jiraUpdatedAt: new Date(),
     },
     {
-      projectId: engProject!.id,
+      projectId: platformProject!.id,
       jiraIssueId: 'issue_60004',
       jiraIssueKey: 'ENG-615',
       summary: 'Implement caching layer for API responses',
@@ -297,7 +331,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       jiraUpdatedAt: new Date('2026-02-01 09:30:00'),
     },
     {
-      projectId: engProject!.id,
+      projectId: platformProject!.id,
       jiraIssueId: 'issue_60005',
       jiraIssueKey: 'ENG-623',
       summary: 'Upgrade frontend framework to latest version',
@@ -315,7 +349,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       resolvedAt: new Date('2026-01-15 16:30:00'),
     },
     {
-      projectId: engProject!.id,
+      projectId: platformProject!.id,
       jiraIssueId: 'issue_60006',
       jiraIssueKey: 'ENG-635',
       summary: 'Add automated backup system',
@@ -332,7 +366,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       jiraUpdatedAt: new Date(),
     },
     {
-      projectId: engProject!.id,
+      projectId: platformProject!.id,
       jiraIssueId: 'issue_60007',
       jiraIssueKey: 'ENG-642',
       summary: 'Implement CI/CD pipeline improvements',
@@ -350,7 +384,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
     },
     // Support tickets
     {
-      projectId: supProject!.id,
+      projectId: opsProject!.id,
       jiraIssueId: 'issue_70001',
       jiraIssueKey: 'SUP-2234',
       summary: 'Customer unable to access dashboard',
@@ -367,7 +401,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       resolvedAt: new Date('2026-01-30 14:10:00'),
     },
     {
-      projectId: supProject!.id,
+      projectId: opsProject!.id,
       jiraIssueId: 'issue_70002',
       jiraIssueKey: 'SUP-2267',
       summary: 'Export functionality not working for large datasets',
@@ -383,7 +417,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       jiraUpdatedAt: new Date(),
     },
     {
-      projectId: supProject!.id,
+      projectId: opsProject!.id,
       jiraIssueId: 'issue_70003',
       jiraIssueKey: 'SUP-2278',
       summary: 'Mobile app login issues on iOS devices',
@@ -399,7 +433,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       jiraUpdatedAt: new Date('2026-02-03 10:15:00'),
     },
     {
-      projectId: supProject!.id,
+      projectId: opsProject!.id,
       jiraIssueId: 'issue_70004',
       jiraIssueKey: 'SUP-2285',
       summary: 'Email notifications not being received',
@@ -415,7 +449,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       jiraUpdatedAt: new Date(),
     },
     {
-      projectId: supProject!.id,
+      projectId: opsProject!.id,
       jiraIssueId: 'issue_70005',
       jiraIssueKey: 'SUP-2291',
       summary: 'Search functionality returning incorrect results',
@@ -432,7 +466,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       resolvedAt: new Date('2026-01-31 12:45:00'),
     },
     {
-      projectId: supProject!.id,
+      projectId: opsProject!.id,
       jiraIssueId: 'issue_70006',
       jiraIssueKey: 'SUP-2298',
       summary: 'User profile image upload failing',
@@ -449,7 +483,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       resolvedAt: new Date('2026-01-28 10:30:00'),
     },
     {
-      projectId: supProject!.id,
+      projectId: opsProject!.id,
       jiraIssueId: 'issue_70007',
       jiraIssueKey: 'SUP-2305',
       summary: 'Password reset link not working',
@@ -466,187 +500,11 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
     },
   ];
 
-  // Generate additional issues for more realistic dataset
-  const additionalIssues: any[] = [];
-  const priorities = ['critical', 'high', 'medium', 'low'];
-  const statuses = ['open', 'in_progress', 'resolved', 'closed'];
-  const issueTypes = ['bug', 'task', 'story', 'incident', 'epic'];
-  const users = [
-    { id: 'user_001', name: 'John Smith' },
-    { id: 'user_002', name: 'Jane Doe' },
-    { id: 'user_003', name: 'Alice Johnson' },
-    { id: 'user_004', name: 'Bob Wilson' },
-    { id: 'user_005', name: 'Charlie Brown' },
-    { id: 'user_006', name: 'Diana Prince' },
-    { id: 'user_007', name: 'Frank Miller' },
-    { id: 'user_008', name: 'Helen Keller' },
-  ];
+  // Combine refined issues with original demo issues
+  const allIssuesData = [...issuesData, ...originalDemoIssues];
 
-  const issueTemplates = [
-    { summary: 'API response time degradation', description: 'API endpoints showing increased latency' },
-    { summary: 'Memory leak in background worker', description: 'Worker process consuming excessive memory' },
-    { summary: 'Login authentication failing intermittently', description: 'Users reporting random login failures' },
-    { summary: 'Email notifications not being delivered', description: 'Notification service queue backed up' },
-    { summary: 'Data export feature timeout', description: 'Large exports timing out after 30s' },
-    { summary: 'Search functionality returning incorrect results', description: 'Search index appears to be stale' },
-    { summary: 'Mobile app crash on Android 13', description: 'App crashing on specific Android version' },
-    { summary: 'Dashboard loading slowly', description: 'Dashboard taking 10+ seconds to load' },
-    { summary: 'File upload failing for large files', description: 'Files over 50MB fail to upload' },
-    { summary: 'Integration with third-party service broken', description: 'API changes from vendor breaking integration' },
-    { summary: 'Report generation producing empty PDFs', description: 'PDF export functionality broken' },
-    { summary: 'Cache invalidation not working properly', description: 'Stale data being served to users' },
-    { summary: 'Database query optimization needed', description: 'Slow queries impacting performance' },
-    { summary: 'Rate limiting not functioning correctly', description: 'Rate limits being bypassed' },
-    { summary: 'Webhook delivery failures', description: 'Webhooks timing out or failing' },
-    { summary: 'UI element alignment issues on mobile', description: 'Layout broken on small screens' },
-    { summary: 'Data validation allowing invalid inputs', description: 'Form validation needs improvement' },
-    { summary: 'Session timeout too aggressive', description: 'Users being logged out too quickly' },
-    { summary: 'Backup process failing silently', description: 'Backup job completing without actual backup' },
-    { summary: 'Analytics tracking not capturing events', description: 'Missing analytics data for user actions' },
-  ];
-
-  // Generate 980 more issues (total will be 1000)
-  // Strategy: Create 40% recent (0-30 days), 30% mid (30-60 days), 30% old (60-90 days)
-  for (let i = 0; i < 980; i++) {
-    const projectOptions = [prodProject, engProject, supProject];
-    const project = projectOptions[i % 3];
-    const projectPrefix = project!.jiraProjectKey;
-    const template = issueTemplates[i % issueTemplates.length];
-    const issueType = issueTypes[Math.floor(Math.random() * issueTypes.length)];
-    const assignee = users[Math.floor(Math.random() * users.length)];
-    const reporter = users[Math.floor(Math.random() * users.length)];
-
-    // Generate dates - deterministic distribution across time periods
-    let daysAgo;
-    if (i < 400) {
-      // First 400 issues: 0-30 days ago (recent)
-      daysAgo = Math.floor(Math.random() * 30);
-    } else if (i < 700) {
-      // Next 300 issues: 30-60 days ago (mid)
-      daysAgo = Math.floor(Math.random() * 30) + 30;
-    } else {
-      // Last 280 issues: 60-90 days ago (old)
-      daysAgo = Math.floor(Math.random() * 30) + 60;
-    }
-    const createdDate = new Date();
-    createdDate.setDate(createdDate.getDate() - daysAgo);
-
-    // Adjust priority and status distribution based on age - recent issues have better metrics
-    let adjustedPriority;
-    let adjustedStatus;
-
-    if (daysAgo > 60) {
-      // Older data (60-90 days ago) - MUCH WORSE metrics
-      const priorityChance = Math.random();
-      if (priorityChance < 0.20) {
-        adjustedPriority = 'critical'; // 20% (many critical!)
-      } else if (priorityChance < 0.45) {
-        adjustedPriority = 'high'; // 25%
-      } else if (priorityChance < 0.75) {
-        adjustedPriority = 'medium'; // 30%
-      } else {
-        adjustedPriority = 'low'; // 25%
-      }
-
-      // MUCH MORE open/in-progress issues in older data (high backlog!)
-      const statusChance = Math.random();
-      if (statusChance < 0.55) {
-        adjustedStatus = 'open'; // 55% (huge backlog!)
-      } else if (statusChance < 0.75) {
-        adjustedStatus = 'in_progress'; // 20%
-      } else if (statusChance < 0.85) {
-        adjustedStatus = 'done'; // 10%
-      } else if (statusChance < 0.93) {
-        adjustedStatus = 'resolved'; // 8%
-      } else {
-        adjustedStatus = 'closed'; // 7%
-      }
-    } else if (daysAgo > 30) {
-      // Mid-range data (30-60 days ago) - moderate metrics
-      const priorityChance = Math.random();
-      if (priorityChance < 0.05) {
-        adjustedPriority = 'critical'; // 5%
-      } else if (priorityChance < 0.20) {
-        adjustedPriority = 'high'; // 15%
-      } else if (priorityChance < 0.55) {
-        adjustedPriority = 'medium'; // 35%
-      } else {
-        adjustedPriority = 'low'; // 45%
-      }
-
-      // Better completion rate
-      const statusChance = Math.random();
-      if (statusChance < 0.25) {
-        adjustedStatus = 'open'; // 25%
-      } else if (statusChance < 0.40) {
-        adjustedStatus = 'in_progress'; // 15%
-      } else if (statusChance < 0.70) {
-        adjustedStatus = 'done'; // 30%
-      } else if (statusChance < 0.85) {
-        adjustedStatus = 'resolved'; // 15%
-      } else {
-        adjustedStatus = 'closed'; // 15%
-      }
-    } else {
-      // Recent data (0-30 days ago) - MUCH BETTER metrics
-      const priorityChance = Math.random();
-      if (priorityChance < 0.01) {
-        adjustedPriority = 'critical'; // 1% (almost none!)
-      } else if (priorityChance < 0.05) {
-        adjustedPriority = 'high'; // 4%
-      } else if (priorityChance < 0.20) {
-        adjustedPriority = 'medium'; // 15%
-      } else {
-        adjustedPriority = 'low'; // 80%
-      }
-
-      // VERY high completion rate for recent issues
-      const statusChance = Math.random();
-      if (statusChance < 0.08) {
-        adjustedStatus = 'open'; // 8% (very low backlog!)
-      } else if (statusChance < 0.15) {
-        adjustedStatus = 'in_progress'; // 7%
-      } else if (statusChance < 0.70) {
-        adjustedStatus = 'done'; // 55% (high completion!)
-      } else if (statusChance < 0.90) {
-        adjustedStatus = 'resolved'; // 20%
-      } else {
-        adjustedStatus = 'closed'; // 10%
-      }
-    }
-
-    const updatedDate = new Date(createdDate);
-    updatedDate.setHours(updatedDate.getHours() + Math.floor(Math.random() * 48));
-
-    const issue: any = {
-      projectId: project!.id,
-      jiraIssueId: `issue_${80000 + i}`,
-      jiraIssueKey: `${projectPrefix}-${3000 + i}`,
-      summary: `${template.summary} #${i + 1}`,
-      description: template.description,
-      issueType,
-      status: adjustedStatus,
-      priority: adjustedPriority,
-      assigneeAccountId: assignee.id,
-      assigneeDisplayName: assignee.name,
-      reporterAccountId: reporter.id,
-      reporterDisplayName: reporter.name,
-      jiraCreatedAt: createdDate,
-      jiraUpdatedAt: updatedDate,
-    };
-
-    // Add resolved date if status is resolved or closed
-    if (adjustedStatus === 'resolved' || adjustedStatus === 'closed' || adjustedStatus === 'done') {
-      issue.resolvedAt = updatedDate;
-    }
-
-    additionalIssues.push(issue);
-  }
-
-  // Combine original and generated issues
-  const allIssues = [...issuesData, ...additionalIssues];
-
-  for (const issueData of allIssues) {
+  // Create issues in database
+  for (const issueData of allIssuesData) {
     // Make jiraIssueId unique per tenant
     const uniqueJiraIssueId = `${issueData.jiraIssueId}_t${tenantId}`;
 
