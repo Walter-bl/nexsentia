@@ -1147,9 +1147,12 @@ export class DashboardController {
       return 'servicenow';
     }
 
-    // trend_acceleration from Jira issue rate
-    if (signal.signalType === 'trend_acceleration' && description.includes('jira')) {
-      return 'jira';
+    // trend_acceleration signals - check description for source
+    if (signal.signalType === 'trend_acceleration') {
+      if (description.includes('jira')) return 'jira';
+      if (description.includes('slack')) return 'slack';
+      if (description.includes('teams')) return 'teams';
+      if (description.includes('servicenow') || description.includes('incident')) return 'servicenow';
     }
 
     // Default to servicenow for recurring patterns, jira for everything else
