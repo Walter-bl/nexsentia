@@ -669,13 +669,22 @@ export class DashboardController {
       engagement: ['team_engagement'],
     };
 
+    // Category display titles (specific, actionable)
+    const categoryTitles: Record<string, string> = {
+      incident_management: 'Incident Response & Resolution',
+      team_productivity: 'Delivery & Output Velocity',
+      communication: 'Collaboration & Engagement',
+      quality: 'Code Quality & Deployment Success',
+      engagement: 'Team Morale & Participation',
+    };
+
     // Category descriptions for user clarity
     const categoryDescriptions: Record<string, string> = {
-      incident_management: 'Measures how effectively your team handles and resolves incidents',
-      team_productivity: 'Tracks team output, velocity, and work completion rates',
-      communication: 'Evaluates team collaboration and engagement levels',
-      quality: 'Monitors code quality and deployment success rates',
-      engagement: 'Assesses overall team morale and participation',
+      incident_management: 'How effectively your team handles and resolves incidents',
+      team_productivity: 'Team output, velocity, and work completion rates',
+      communication: 'Team collaboration and engagement levels',
+      quality: 'Code quality and deployment success rates',
+      engagement: 'Overall team morale and participation',
     };
 
     const categoryScores: Record<string, any> = {};
@@ -718,6 +727,7 @@ export class DashboardController {
           score,
           status,
           trend: this.calculateCategoryTrend(categoryMetrics),
+          title: categoryTitles[category],
           description: categoryDescriptions[category],
           metrics: detailedMetrics,
           insight,

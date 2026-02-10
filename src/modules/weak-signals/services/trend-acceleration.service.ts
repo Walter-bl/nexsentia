@@ -350,33 +350,34 @@ export class TrendAccelerationService {
   ): TrendAcceleration | null {
     if (timeSeries.length < 10) return null;
 
-    // Split into two halves
-    const midpoint = Math.floor(timeSeries.length / 2);
-    const firstHalf = timeSeries.slice(0, midpoint);
-    const secondHalf = timeSeries.slice(midpoint);
+    // Sort timeSeries by timestamp to ensure chronological order
+    const sortedTimeSeries = [...timeSeries].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-    // Calculate trends for each half
-    const firstTrend = this.calculateLinearTrend(firstHalf);
-    const secondTrend = this.calculateLinearTrend(secondHalf);
-
-    // Calculate baseline (average of first half)
-    const baseline = firstHalf.length > 0
-      ? firstHalf.reduce((sum, point) => sum + (point.value || 0), 0) / firstHalf.length
+    // Calculate baseline from OLDEST 33% of data (60-90 days ago range)
+    const baselinePoints = Math.max(3, Math.floor(sortedTimeSeries.length * 0.33));
+    const baselineData = sortedTimeSeries.slice(0, baselinePoints);
+    const baseline = baselineData.length > 0
+      ? baselineData.reduce((sum, point) => sum + (point.value || 0), 0) / baselineData.length
       : 0;
 
-    // Calculate current (average of recent 20% of data)
-    const recentPoints = Math.max(2, Math.floor(timeSeries.length * 0.2));
-    const recent = timeSeries.slice(-recentPoints);
-    const current = recent.length > 0
-      ? recent.reduce((sum, point) => sum + (point.value || 0), 0) / recent.length
+    // Calculate current from NEWEST 33% of data (0-30 days ago range)
+    const recentPoints = Math.max(3, Math.floor(sortedTimeSeries.length * 0.33));
+    const recentData = sortedTimeSeries.slice(-recentPoints);
+    const current = recentData.length > 0
+      ? recentData.reduce((sum, point) => sum + (point.value || 0), 0) / recentData.length
       : 0;
+
+    // Calculate trends for baseline and recent periods
+    const baselineTrend = this.calculateLinearTrend(baselineData);
+    const recentTrend = this.calculateLinearTrend(recentData);
 
     // Calculate change rate
     const changeRate = baseline !== 0 ? ((current - baseline) / baseline) * 100 : 0;
 
-    // Calculate acceleration factor (ratio of second trend to first trend)
-    const accelerationFactor = firstTrend.slope !== 0 && isFinite(firstTrend.slope)
-      ? Math.abs(secondTrend.slope / firstTrend.slope)
+    // Calculate acceleration factor (ratio of current rate to baseline rate)
+    // If baseline is 5 events/day and current is 12 events/day, factor = 12/5 = 2.4x
+    const accelerationFactor = baseline !== 0 && isFinite(baseline)
+      ? Math.abs(current / baseline)
       : 1;
 
     // Only report if there's significant acceleration
@@ -392,13 +393,13 @@ export class TrendAccelerationService {
     else severity = 'low';
 
     // Calculate confidence
-    const confidence = Math.min(95, 60 + Math.min(20, timeSeries.length / 2) + Math.min(15, accelerationFactor * 3));
+    const confidence = Math.min(95, 60 + Math.min(20, sortedTimeSeries.length / 2) + Math.min(15, accelerationFactor * 3));
 
     // Predict escalation time
     let predictedEscalationTime: Date | null = null;
-    if (secondTrend.slope > 0 && current > 0) {
+    if (recentTrend.slope > 0 && current > 0) {
       // Estimate when metric will reach 2x current value
-      const daysToDouble = (current / secondTrend.slope);
+      const daysToDouble = (current / recentTrend.slope);
       if (daysToDouble > 0 && daysToDouble < 90) {
         predictedEscalationTime = new Date();
         predictedEscalationTime.setDate(predictedEscalationTime.getDate() + Math.floor(daysToDouble));
@@ -409,10 +410,10 @@ export class TrendAccelerationService {
     const riskIndicators: string[] = [];
     if (accelerationFactor > 3) riskIndicators.push('Rapid acceleration detected');
     if (Math.abs(changeRate) > 50) riskIndicators.push('Significant deviation from baseline');
-    if (secondTrend.r2 > 0.7) riskIndicators.push('Strong trending pattern');
+    if (recentTrend.r2 > 0.7) riskIndicators.push('Strong trending pattern');
     if (predictedEscalationTime) riskIndicators.push(`May escalate by ${predictedEscalationTime.toLocaleDateString()}`);
 
-    const timeWindow = `${timeSeries[0].timestamp.toLocaleDateString()} to ${timeSeries[timeSeries.length - 1].timestamp.toLocaleDateString()}`;
+    const timeWindow = `${sortedTimeSeries[0].timestamp.toLocaleDateString()} to ${sortedTimeSeries[sortedTimeSeries.length - 1].timestamp.toLocaleDateString()}`;
 
     // Ensure all numeric values are safe
     const safeBaseline = isNaN(baseline) || !isFinite(baseline) ? 0 : baseline;
@@ -436,7 +437,7 @@ export class TrendAccelerationService {
       severity,
       confidenceScore: safeConfidence,
       predictedEscalationTime,
-      evidence: timeSeries.map(point => ({
+      evidence: sortedTimeSeries.map(point => ({
         timestamp: point.timestamp,
         value: isNaN(point.value) || !isFinite(point.value) ? 0 : point.value,
         source,
