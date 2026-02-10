@@ -25,7 +25,7 @@ export class WeakSignalDetectionService {
     // Run pattern extraction and trend detection in parallel
     const [patterns, accelerations] = await Promise.all([
       this.patternExtractionService.extractRecurringPatterns(tenantId, daysBack),
-      this.trendAccelerationService.detectTrendAccelerations(tenantId, Math.min(daysBack, 30)),
+      this.trendAccelerationService.detectTrendAccelerations(tenantId, daysBack),
     ]);
 
     this.logger.log(`Found ${patterns.length} patterns and ${accelerations.length} accelerations`);
