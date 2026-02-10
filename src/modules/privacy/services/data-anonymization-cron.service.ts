@@ -9,6 +9,8 @@ import { JiraIssue } from '../../jira/entities/jira-issue.entity';
 import { ServiceNowIncident } from '../../servicenow/entities/servicenow-incident.entity';
 import { SlackMessage } from '../../slack/entities/slack-message.entity';
 import { TeamsMessage } from '../../teams/entities/teams-message.entity';
+import { GmailMessage } from '../../gmail/entities/gmail-message.entity';
+import { OutlookMessage } from '../../outlook/entities/outlook-message.entity';
 
 @Injectable()
 export class DataAnonymizationCronService implements OnModuleInit {
@@ -29,6 +31,10 @@ export class DataAnonymizationCronService implements OnModuleInit {
     private readonly slackRepository: Repository<SlackMessage>,
     @InjectRepository(TeamsMessage)
     private readonly teamsRepository: Repository<TeamsMessage>,
+    @InjectRepository(GmailMessage)
+    private readonly gmailRepository: Repository<GmailMessage>,
+    @InjectRepository(OutlookMessage)
+    private readonly outlookRepository: Repository<OutlookMessage>,
   ) {
     // Check if anonymization cron is enabled
     this.isEnabled = this.configService.get<string>('ENABLE_ANONYMIZATION_CRON', 'false') === 'true';
@@ -126,6 +132,8 @@ export class DataAnonymizationCronService implements OnModuleInit {
         serviceNow: 0,
         slack: 0,
         teams: 0,
+        gmail: 0,
+        outlook: 0,
       };
 
       // Anonymize Jira data
@@ -139,6 +147,12 @@ export class DataAnonymizationCronService implements OnModuleInit {
 
       // Anonymize Teams data
       stats.teams = await this.anonymizeTeamsData();
+
+      // Anonymize Gmail data
+      stats.gmail = await this.anonymizeGmailData();
+
+      // Anonymize Outlook data
+      stats.outlook = await this.anonymizeOutlookData();
 
       this.logger.log('Data anonymization completed successfully', stats);
     } catch (error) {
@@ -156,6 +170,8 @@ export class DataAnonymizationCronService implements OnModuleInit {
     serviceNow: number;
     slack: number;
     teams: number;
+    gmail: number;
+    outlook: number;
   }> {
     this.logger.log('Manual anonymization triggered for ingestion data...');
 
@@ -164,6 +180,8 @@ export class DataAnonymizationCronService implements OnModuleInit {
       serviceNow: await this.anonymizeServiceNowData(),
       slack: await this.anonymizeSlackData(),
       teams: await this.anonymizeTeamsData(),
+      gmail: await this.anonymizeGmailData(),
+      outlook: await this.anonymizeOutlookData(),
     };
   }
 
@@ -327,6 +345,106 @@ export class DataAnonymizationCronService implements OnModuleInit {
     }
 
     this.logger.log(`Anonymized ${count} Teams messages`);
+    return count;
+  }
+
+  /**
+   * Anonymize Gmail messages
+   */
+  private async anonymizeGmailData(): Promise<number> {
+    const messages = await this.gmailRepository.find();
+    let count = 0;
+
+    for (const message of messages) {
+      let updated = false;
+
+      // Anonymize from email
+      if (message.fromEmail && !message.fromEmail.includes('anonymized.local')) {
+        message.fromEmail = `user${this.generateRandomId()}@anonymized.local`;
+        updated = true;
+      }
+
+      // Anonymize from name
+      if (message.fromName && !message.fromName.startsWith('User_')) {
+        message.fromName = `User_${this.generateRandomId()}`;
+        updated = true;
+      }
+
+      // Anonymize subject containing sensitive data
+      if (message.subject && this.containsSensitiveData(message.subject)) {
+        message.subject = this.anonymizeSensitiveContent(message.subject);
+        updated = true;
+      }
+
+      // Anonymize body text
+      if (message.bodyText && this.containsSensitiveData(message.bodyText)) {
+        message.bodyText = this.anonymizeSensitiveContent(message.bodyText);
+        updated = true;
+      }
+
+      // Anonymize snippet
+      if (message.snippet && this.containsSensitiveData(message.snippet)) {
+        message.snippet = this.anonymizeSensitiveContent(message.snippet);
+        updated = true;
+      }
+
+      if (updated) {
+        await this.gmailRepository.save(message);
+        count++;
+      }
+    }
+
+    this.logger.log(`Anonymized ${count} Gmail messages`);
+    return count;
+  }
+
+  /**
+   * Anonymize Outlook messages
+   */
+  private async anonymizeOutlookData(): Promise<number> {
+    const messages = await this.outlookRepository.find();
+    let count = 0;
+
+    for (const message of messages) {
+      let updated = false;
+
+      // Anonymize from email
+      if (message.fromEmail && !message.fromEmail.includes('anonymized.local')) {
+        message.fromEmail = `user${this.generateRandomId()}@anonymized.local`;
+        updated = true;
+      }
+
+      // Anonymize from name
+      if (message.fromName && !message.fromName.startsWith('User_')) {
+        message.fromName = `User_${this.generateRandomId()}`;
+        updated = true;
+      }
+
+      // Anonymize subject containing sensitive data
+      if (message.subject && this.containsSensitiveData(message.subject)) {
+        message.subject = this.anonymizeSensitiveContent(message.subject);
+        updated = true;
+      }
+
+      // Anonymize body text
+      if (message.bodyText && this.containsSensitiveData(message.bodyText)) {
+        message.bodyText = this.anonymizeSensitiveContent(message.bodyText);
+        updated = true;
+      }
+
+      // Anonymize preview text
+      if (message.bodyPreview && this.containsSensitiveData(message.bodyPreview)) {
+        message.bodyPreview = this.anonymizeSensitiveContent(message.bodyPreview);
+        updated = true;
+      }
+
+      if (updated) {
+        await this.outlookRepository.save(message);
+        count++;
+      }
+    }
+
+    this.logger.log(`Anonymized ${count} Outlook messages`);
     return count;
   }
 
