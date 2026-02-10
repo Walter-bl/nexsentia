@@ -513,7 +513,7 @@ export class WeakSignalDetectionService {
   private categorizeMetric(metricKey: string): string {
     if (metricKey.includes('jira')) return 'Engineering';
     if (metricKey.includes('servicenow') || metricKey.includes('incident')) return 'Operations';
-    if (metricKey.includes('slack') || metricKey.includes('teams') || metricKey.includes('communication')) return 'Communication';
+    if (metricKey.includes('slack') || metricKey.includes('teams') || metricKey.includes('gmail') || metricKey.includes('outlook') || metricKey.includes('communication')) return 'Communication';
     if (metricKey.includes('event')) return 'Timeline';
     return 'Metrics';
   }

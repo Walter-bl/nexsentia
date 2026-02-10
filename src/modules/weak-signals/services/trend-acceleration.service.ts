@@ -239,7 +239,7 @@ export class TrendAccelerationService {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - daysBack);
 
-    const [slackMessages, teamsMessages] = await Promise.all([
+    const [slackMessages, teamsMessages, gmailMessages, outlookMessages] = await Promise.all([
       this.slackMessageRepository.find({
         where: {
           tenantId,
@@ -254,9 +254,23 @@ export class TrendAccelerationService {
         },
         order: { createdDateTime: 'ASC' },
       }),
+      this.gmailMessageRepository.find({
+        where: {
+          tenantId,
+          gmailCreatedAt: MoreThan(startDate),
+        },
+        order: { gmailCreatedAt: 'ASC' },
+      }),
+      this.outlookMessageRepository.find({
+        where: {
+          tenantId,
+          outlookCreatedAt: MoreThan(startDate),
+        },
+        order: { outlookCreatedAt: 'ASC' },
+      }),
     ]);
 
-    this.logger.debug(`Communication data found: Slack=${slackMessages.length}, Teams=${teamsMessages.length} messages (${daysBack} days back from ${startDate.toISOString()})`);
+    this.logger.debug(`Communication data found: Slack=${slackMessages.length}, Teams=${teamsMessages.length}, Gmail=${gmailMessages.length}, Outlook=${outlookMessages.length} messages (${daysBack} days back from ${startDate.toISOString()})`);
 
     // Analyze Slack message rate
     if (slackMessages.length > 10) {
@@ -288,11 +302,45 @@ export class TrendAccelerationService {
       }
     }
 
+    // Analyze Gmail message rate
+    if (gmailMessages.length > 10) {
+      const gmailDailyCounts = this.aggregateByDay(gmailMessages.map(m => m.gmailCreatedAt || m.createdAt));
+      const gmailAcceleration = this.detectAccelerationInTimeSeries(
+        gmailDailyCounts,
+        'gmail_message_rate',
+        'Gmail Message Activity Rate',
+        'gmail'
+      );
+
+      if (gmailAcceleration) {
+        this.logger.log(`Created Gmail trend acceleration signal with ${gmailMessages.length} messages`);
+        accelerations.push(gmailAcceleration);
+      }
+    }
+
+    // Analyze Outlook message rate
+    if (outlookMessages.length > 10) {
+      const outlookDailyCounts = this.aggregateByDay(outlookMessages.map(m => m.outlookCreatedAt || m.createdAt));
+      const outlookAcceleration = this.detectAccelerationInTimeSeries(
+        outlookDailyCounts,
+        'outlook_message_rate',
+        'Outlook Message Activity Rate',
+        'outlook'
+      );
+
+      if (outlookAcceleration) {
+        this.logger.log(`Created Outlook trend acceleration signal with ${outlookMessages.length} messages`);
+        accelerations.push(outlookAcceleration);
+      }
+    }
+
     // Analyze combined communication activity
-    if (slackMessages.length + teamsMessages.length > 10) {
+    if (slackMessages.length + teamsMessages.length + gmailMessages.length + outlookMessages.length > 10) {
       const allMessages = [
         ...slackMessages.map(m => m.slackCreatedAt || m.createdAt),
         ...teamsMessages.map(m => m.createdDateTime || m.createdAt),
+        ...gmailMessages.map(m => m.gmailCreatedAt || m.createdAt),
+        ...outlookMessages.map(m => m.outlookCreatedAt || m.createdAt),
       ];
       const combinedDailyCounts = this.aggregateByDay(allMessages);
       const combinedAcceleration = this.detectAccelerationInTimeSeries(

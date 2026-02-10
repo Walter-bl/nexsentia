@@ -20,6 +20,8 @@ import { JiraConnection } from '../jira/entities/jira-connection.entity';
 import { ServiceNowConnection } from '../servicenow/entities/servicenow-connection.entity';
 import { SlackConnection } from '../slack/entities/slack-connection.entity';
 import { TeamsConnection } from '../teams/entities/teams-connection.entity';
+import { GmailConnection } from '../gmail/entities/gmail-connection.entity';
+import { OutlookConnection } from '../outlook/entities/outlook-connection.entity';
 
 @Injectable()
 export class AuthService {
@@ -39,6 +41,10 @@ export class AuthService {
     private readonly slackConnectionRepository: Repository<SlackConnection>,
     @InjectRepository(TeamsConnection)
     private readonly teamsConnectionRepository: Repository<TeamsConnection>,
+    @InjectRepository(GmailConnection)
+    private readonly gmailConnectionRepository: Repository<GmailConnection>,
+    @InjectRepository(OutlookConnection)
+    private readonly outlookConnectionRepository: Repository<OutlookConnection>,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
@@ -279,8 +285,10 @@ export class AuthService {
     serviceNowConnected: boolean;
     slackConnected: boolean;
     teamsConnected: boolean;
+    gmailConnected: boolean;
+    outlookConnected: boolean;
   }> {
-    const [jiraConnection, serviceNowConnection, slackConnection, teamsConnection] = await Promise.all([
+    const [jiraConnection, serviceNowConnection, slackConnection, teamsConnection, gmailConnection, outlookConnection] = await Promise.all([
       this.jiraConnectionRepository.findOne({
         where: { tenantId, isActive: true },
       }),
@@ -293,6 +301,12 @@ export class AuthService {
       this.teamsConnectionRepository.findOne({
         where: { tenantId, isActive: true },
       }),
+      this.gmailConnectionRepository.findOne({
+        where: { tenantId, isActive: true },
+      }),
+      this.outlookConnectionRepository.findOne({
+        where: { tenantId, isActive: true },
+      }),
     ]);
 
     return {
@@ -300,6 +314,8 @@ export class AuthService {
       serviceNowConnected: !!serviceNowConnection,
       slackConnected: !!slackConnection,
       teamsConnected: !!teamsConnection,
+      gmailConnected: !!gmailConnection,
+      outlookConnected: !!outlookConnection,
     };
   }
 }

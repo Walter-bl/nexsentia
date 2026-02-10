@@ -20,6 +20,8 @@ import { JiraConnection } from '../jira/entities/jira-connection.entity';
 import { ServiceNowConnection } from '../servicenow/entities/servicenow-connection.entity';
 import { SlackConnection } from '../slack/entities/slack-connection.entity';
 import { TeamsConnection } from '../teams/entities/teams-connection.entity';
+import { GmailConnection } from '../gmail/entities/gmail-connection.entity';
+import { OutlookConnection } from '../outlook/entities/outlook-connection.entity';
 
 @Module({
   imports: [
@@ -39,6 +41,8 @@ import { TeamsConnection } from '../teams/entities/teams-connection.entity';
       ServiceNowConnection,
       SlackConnection,
       TeamsConnection,
+      GmailConnection,
+      OutlookConnection,
     ]),
     UsersModule,
     TenantsModule,

@@ -238,6 +238,8 @@ export class PatternExtractionService {
       ...outlookMessages.map(m => ({ text: `${m.subject} ${m.bodyText || ''}`, date: m.outlookCreatedAt, source: 'outlook', id: m.id.toString() })),
     ];
 
+    this.logger.log(`[extractCommunicationKeywordSpikes] Message counts - Slack: ${slackMessages.length}, Teams: ${teamsMessages.length}, Gmail: ${gmailMessages.length}, Outlook: ${outlookMessages.length}`);
+
     const keywordFrequency = this.extractKeywords(allMessages);
 
     // Detect spikes in keyword usage - analyze per source to create separate patterns
@@ -253,7 +255,12 @@ export class PatternExtractionService {
       // Analyze each source independently
       for (const [source, sourceMentions] of Object.entries(mentionsBySource)) {
         // Skip if this source doesn't have enough mentions
-        if (sourceMentions.length < 5) continue;
+        if (sourceMentions.length < 5) {
+          if ((source === 'gmail' || source === 'outlook') && sourceMentions.length > 0) {
+            this.logger.log(`[extractCommunicationKeywordSpikes] Skipping ${source} for keyword "${keyword}" - only ${sourceMentions.length} mentions (need 5)`);
+          }
+          continue;
+        }
 
         const sourceRecentMentions = sourceMentions.filter(m => m.date.getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000);
         const sourceOlderMentions = sourceMentions.filter(m => m.date.getTime() <= Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -266,6 +273,10 @@ export class PatternExtractionService {
         // Check if this source has a spike (2x increase) and at least 3 recent mentions
         if (sourceRecentRate > sourceHistoricalRate * 2 && sourceRecentMentions.length >= 3) {
           const sourceConfidence = Math.min(95, 60 + (sourceRecentRate / sourceHistoricalRate) * 10);
+
+          if (source === 'gmail' || source === 'outlook') {
+            this.logger.log(`[extractCommunicationKeywordSpikes] Creating ${source} pattern for keyword "${keyword}" - ${sourceRecentMentions.length} recent mentions, confidence: ${sourceConfidence}`);
+          }
 
           patterns.push({
             patternId: `keyword_spike_${this.hashString(keyword)}_${source}`,
@@ -284,9 +295,13 @@ export class PatternExtractionService {
               relevanceScore: 70,
             })),
           });
+        } else if (source === 'gmail' || source === 'outlook') {
+          this.logger.log(`[extractCommunicationKeywordSpikes] ${source} keyword "${keyword}" did not meet spike criteria - recent: ${sourceRecentMentions.length}, rate: ${sourceRecentRate.toFixed(2)}, historical: ${sourceHistoricalRate.toFixed(2)}`);
         }
       }
     }
+
+    this.logger.log(`[extractCommunicationKeywordSpikes] Total patterns created: ${patterns.length}`);
 
     return patterns;
   }

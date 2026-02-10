@@ -17,6 +17,10 @@ import { TeamsConnection } from '../teams/entities/teams-connection.entity';
 import { TeamsMessage } from '../teams/entities/teams-message.entity';
 import { ServiceNowConnection } from '../servicenow/entities/servicenow-connection.entity';
 import { ServiceNowIncident } from '../servicenow/entities/servicenow-incident.entity';
+import { GmailConnection } from '../gmail/entities/gmail-connection.entity';
+import { GmailMessage } from '../gmail/entities/gmail-message.entity';
+import { OutlookConnection } from '../outlook/entities/outlook-connection.entity';
+import { OutlookMessage } from '../outlook/entities/outlook-message.entity';
 
 // Services
 import { PiiDetectionService } from './services/pii-detection.service';
@@ -47,6 +51,10 @@ import { PrivacyDashboardController } from './controllers/privacy-dashboard.cont
       TeamsMessage,
       ServiceNowConnection,
       ServiceNowIncident,
+      GmailConnection,
+      GmailMessage,
+      OutlookConnection,
+      OutlookMessage,
     ]),
     ConfigModule,
   ],

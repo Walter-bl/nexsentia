@@ -1167,7 +1167,30 @@ export class DashboardController {
   }
 
   private extractSourceFromSignal(signal: any): 'jira' | 'servicenow' | 'slack' | 'teams' | 'gmail' | 'outlook' {
-    // Extract source from affectedEntities (which is an array of entity objects)
+    // PRIORITY 1: Check sourceSignals array (most reliable - contains actual source metadata)
+    if (signal.sourceSignals && Array.isArray(signal.sourceSignals) && signal.sourceSignals.length > 0) {
+      // Get the first source signal's source field
+      const source = signal.sourceSignals[0].source?.toLowerCase();
+      if (source === 'jira') return 'jira';
+      if (source === 'servicenow') return 'servicenow';
+      if (source === 'slack') return 'slack';
+      if (source === 'teams') return 'teams';
+      if (source === 'gmail') return 'gmail';
+      if (source === 'outlook') return 'outlook';
+    }
+
+    // PRIORITY 2: Check patternData evidence array (for keyword spike patterns)
+    if (signal.patternData?.evidence && Array.isArray(signal.patternData.evidence) && signal.patternData.evidence.length > 0) {
+      const source = signal.patternData.evidence[0].source?.toLowerCase();
+      if (source === 'jira') return 'jira';
+      if (source === 'servicenow') return 'servicenow';
+      if (source === 'slack') return 'slack';
+      if (source === 'teams') return 'teams';
+      if (source === 'gmail') return 'gmail';
+      if (source === 'outlook') return 'outlook';
+    }
+
+    // PRIORITY 3: Extract source from affectedEntities (which is an array of entity objects)
     if (signal.affectedEntities && Array.isArray(signal.affectedEntities)) {
       // Check each entity in the array for source identifiers
       for (const entity of signal.affectedEntities) {
@@ -1192,7 +1215,7 @@ export class DashboardController {
       }
     }
 
-    // Fallback: try to infer from category or description
+    // PRIORITY 4: Fallback - try to infer from category or description
     const category = (signal.category || '').toLowerCase();
     const description = (signal.description || '').toLowerCase();
 
@@ -1200,6 +1223,8 @@ export class DashboardController {
     if (category.includes('servicenow') || category.includes('incident') || description.includes('incident')) return 'servicenow';
     if (category.includes('slack') || description.includes('slack')) return 'slack';
     if (category.includes('teams') || description.includes('teams')) return 'teams';
+    if (category.includes('gmail') || description.includes('gmail')) return 'gmail';
+    if (category.includes('outlook') || description.includes('outlook')) return 'outlook';
 
     // Check signal type - pattern_recurring is typically from ServiceNow
     if (signal.signalType === 'pattern_recurring' && description.includes('recurring incident pattern')) {
@@ -1211,6 +1236,8 @@ export class DashboardController {
       if (description.includes('jira')) return 'jira';
       if (description.includes('slack')) return 'slack';
       if (description.includes('teams')) return 'teams';
+      if (description.includes('gmail')) return 'gmail';
+      if (description.includes('outlook')) return 'outlook';
       if (description.includes('servicenow') || description.includes('incident')) return 'servicenow';
     }
 
