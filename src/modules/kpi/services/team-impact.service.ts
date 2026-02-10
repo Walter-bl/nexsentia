@@ -127,15 +127,14 @@ export class TeamImpactService {
       previousPeriodStart,
     );
 
-    // Calculate total value and ROI
+    // Calculate total value (time-based only)
     const totalTimeSaved = teamBreakdown.reduce((sum, team) => sum + team.timeSaved.total, 0);
-    const avgEngineerHourlyCost = 100; // $100/hour
-    const totalValueSaved = totalTimeSaved * avgEngineerHourlyCost;
+    const totalProblemsResolved = teamBreakdown.reduce((sum, team) => sum + team.problemsResolved, 0);
 
-    // Estimate platform cost (scales with period)
-    const monthlyPlatformCost = 8333; // ~$100k/year
-    const platformCost = monthlyPlatformCost * periodMonths;
-    const roi = totalValueSaved / platformCost;
+    // Calculate time efficiency: average hours saved per problem resolved
+    const avgTimeSavedPerProblem = totalProblemsResolved > 0
+      ? totalTimeSaved / totalProblemsResolved
+      : 0;
 
     const issuesPrevented = teamBreakdown.reduce((sum, team) => sum + team.incidentsPrevented, 0);
 
@@ -146,8 +145,8 @@ export class TeamImpactService {
         periodMonths,
       },
       roi: {
-        multiple: parseFloat(roi.toFixed(1)),
-        calculationBasis: 'Time saved × engineer hourly cost vs platform cost',
+        multiple: parseFloat(avgTimeSavedPerProblem.toFixed(1)),
+        calculationBasis: 'Average hours saved per problem resolved',
       },
       issuesPrevented,
       overallMetrics: {
