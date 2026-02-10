@@ -139,7 +139,16 @@ export class TeamImpactService {
     const issuesPrevented = teamBreakdown.reduce((sum, team) => sum + team.incidentsPrevented, 0);
 
     // Filter to only show teams with actual activity (problemsResolved > 0)
-    const activeTeams = teamBreakdown.filter(team => team.problemsResolved > 0);
+    // Also exclude randomly generated team names (Team_XXXXXXXX pattern)
+    const activeTeams = teamBreakdown.filter(team => {
+      // Exclude teams with no activity
+      if (team.problemsResolved === 0) return false;
+
+      // Exclude randomly generated team names (Team_[8 alphanumeric chars])
+      if (/^Team_[A-Z0-9]{8}$/.test(team.teamName)) return false;
+
+      return true;
+    });
 
     return {
       totalValue: {
