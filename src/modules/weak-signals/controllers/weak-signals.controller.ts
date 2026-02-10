@@ -185,6 +185,27 @@ export class WeakSignalsController {
     return this.schedulerService.getDetectionStats(tenantId);
   }
 
+  @Post('regenerate')
+  @ApiOperation({ summary: 'Delete all existing signals and regenerate from scratch' })
+  @ApiResponse({ status: 200, description: 'Signals regenerated successfully' })
+  async regenerateSignals(
+    @CurrentTenant() tenantId: number,
+    @Body() dto: DetectWeakSignalsDto,
+  ): Promise<{
+    deleted: number;
+    generated: number;
+    signals: WeakSignalResponseDto[];
+  }> {
+    const deleted = await this.weakSignalDetectionService.deleteAllSignals(tenantId);
+    const signals = await this.weakSignalDetectionService.detectWeakSignals(tenantId, dto.daysBack);
+
+    return {
+      deleted,
+      generated: signals.length,
+      signals: signals.map(signal => this.mapToResponseDto(signal)),
+    };
+  }
+
   private mapToResponseDto(signal: any): WeakSignalResponseDto {
     return {
       id: signal.id,

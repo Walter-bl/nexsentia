@@ -145,12 +145,14 @@ export class DashboardController {
     // Get recent signals (timeline events) grouped by source
     console.log('[OrganizationalPulse] Fetching recent signals for tenant:', tenantId);
     const recentSignals = await this.getRecentSignals(tenantId, end);
-    const totalSignals = recentSignals.jira.length + recentSignals.servicenow.length + recentSignals.slack.length + recentSignals.teams.length;
+    const totalSignals = recentSignals.jira.length + recentSignals.servicenow.length + recentSignals.slack.length + recentSignals.teams.length + recentSignals.gmail.length + recentSignals.outlook.length;
     console.log('[OrganizationalPulse] Recent signals found:', totalSignals, {
       jira: recentSignals.jira.length,
       servicenow: recentSignals.servicenow.length,
       slack: recentSignals.slack.length,
       teams: recentSignals.teams.length,
+      gmail: recentSignals.gmail.length,
+      outlook: recentSignals.outlook.length,
     });
 
     // Get signal distribution by theme
@@ -1033,6 +1035,30 @@ export class DashboardController {
       category?: string;
       affectedEntities: any;
     }>;
+    gmail: Array<{
+      id: number;
+      signalType: string;
+      title: string;
+      description: string;
+      severity: 'critical' | 'high' | 'medium' | 'low';
+      confidenceScore: number;
+      status: string;
+      timestamp: Date;
+      category?: string;
+      affectedEntities: any;
+    }>;
+    outlook: Array<{
+      id: number;
+      signalType: string;
+      title: string;
+      description: string;
+      severity: 'critical' | 'high' | 'medium' | 'low';
+      confidenceScore: number;
+      status: string;
+      timestamp: Date;
+      category?: string;
+      affectedEntities: any;
+    }>;
   }> {
     console.log('[getRecentSignals] Querying weak signals by category for tenant:', tenantId);
 
@@ -1103,6 +1129,8 @@ export class DashboardController {
     const servicenowSignals = mappedSignals.filter(s => s.source === 'servicenow').slice(0, 15);
     const slackSignals = mappedSignals.filter(s => s.source === 'slack').slice(0, 15);
     const teamsSignals = mappedSignals.filter(s => s.source === 'teams').slice(0, 15);
+    const gmailSignals = mappedSignals.filter(s => s.source === 'gmail').slice(0, 15);
+    const outlookSignals = mappedSignals.filter(s => s.source === 'outlook').slice(0, 15);
 
     console.log('[getRecentSignals] Source extraction sample (first 3 from each category):');
     console.log('Engineering:', engineeringSignals.slice(0, 3).map(s => ({
@@ -1121,6 +1149,8 @@ export class DashboardController {
       servicenow: servicenowSignals.length,
       slack: slackSignals.length,
       teams: teamsSignals.length,
+      gmail: gmailSignals.length,
+      outlook: outlookSignals.length,
     });
 
     // Remove source property before returning
@@ -1131,10 +1161,12 @@ export class DashboardController {
       servicenow: removeSource(servicenowSignals),
       slack: removeSource(slackSignals),
       teams: removeSource(teamsSignals),
+      gmail: removeSource(gmailSignals),
+      outlook: removeSource(outlookSignals),
     };
   }
 
-  private extractSourceFromSignal(signal: any): 'jira' | 'servicenow' | 'slack' | 'teams' {
+  private extractSourceFromSignal(signal: any): 'jira' | 'servicenow' | 'slack' | 'teams' | 'gmail' | 'outlook' {
     // Extract source from affectedEntities (which is an array of entity objects)
     if (signal.affectedEntities && Array.isArray(signal.affectedEntities)) {
       // Check each entity in the array for source identifiers
@@ -1147,12 +1179,16 @@ export class DashboardController {
         if (entityId === 'servicenow' || entityId.includes('servicenow')) return 'servicenow';
         if (entityId === 'slack' || entityId.includes('slack')) return 'slack';
         if (entityId === 'teams' || entityId.includes('teams')) return 'teams';
+        if (entityId === 'gmail' || entityId.includes('gmail')) return 'gmail';
+        if (entityId === 'outlook' || entityId.includes('outlook')) return 'outlook';
 
         // Match on entity name
         if (entityName.includes('jira')) return 'jira';
         if (entityName.includes('servicenow')) return 'servicenow';
         if (entityName.includes('slack')) return 'slack';
         if (entityName.includes('teams')) return 'teams';
+        if (entityName.includes('gmail')) return 'gmail';
+        if (entityName.includes('outlook')) return 'outlook';
       }
     }
 

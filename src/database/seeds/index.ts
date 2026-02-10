@@ -8,6 +8,8 @@ import { seedJiraData } from './jira.seeder';
 import { seedSlackData } from './slack.seeder';
 import { seedTeamsData } from './teams.seeder';
 import { seedServiceNowData } from './servicenow.seeder';
+import { seedGmailData } from './gmail.seeder';
+import { seedOutlookData } from './outlook.seeder';
 import { seedBusinessImpacts } from './business-impact.seeder';
 
 // Load environment variables
@@ -39,6 +41,8 @@ async function runSeeders() {
     await seedSlackData(dataSource, demoTenantId);
     await seedTeamsData(dataSource, demoTenantId);
     await seedServiceNowData(dataSource, demoTenantId);
+    await seedGmailData(dataSource, demoTenantId);
+    await seedOutlookData(dataSource, demoTenantId);
 
     // Seed business impacts (must be after integration data)
     await seedBusinessImpacts(dataSource, demoTenantId);

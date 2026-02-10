@@ -5,6 +5,8 @@ import { JiraIssue } from '../../jira/entities/jira-issue.entity';
 import { ServiceNowIncident } from '../../servicenow/entities/servicenow-incident.entity';
 import { SlackMessage } from '../../slack/entities/slack-message.entity';
 import { TeamsMessage } from '../../teams/entities/teams-message.entity';
+import { GmailMessage } from '../../gmail/entities/gmail-message.entity';
+import { OutlookMessage } from '../../outlook/entities/outlook-message.entity';
 import { TimelineEvent } from '../../timeline/entities/timeline-event.entity';
 
 export interface RecurringPattern {
@@ -38,6 +40,10 @@ export class PatternExtractionService {
     private readonly slackMessageRepository: Repository<SlackMessage>,
     @InjectRepository(TeamsMessage)
     private readonly teamsMessageRepository: Repository<TeamsMessage>,
+    @InjectRepository(GmailMessage)
+    private readonly gmailMessageRepository: Repository<GmailMessage>,
+    @InjectRepository(OutlookMessage)
+    private readonly outlookMessageRepository: Repository<OutlookMessage>,
     @InjectRepository(TimelineEvent)
     private readonly timelineEventRepository: Repository<TimelineEvent>,
   ) {}
@@ -191,7 +197,7 @@ export class PatternExtractionService {
    * Extract keyword spikes from communication channels
    */
   private async extractCommunicationKeywordSpikes(tenantId: number, startDate: Date): Promise<RecurringPattern[]> {
-    const [slackMessages, teamsMessages] = await Promise.all([
+    const [slackMessages, teamsMessages, gmailMessages, outlookMessages] = await Promise.all([
       this.slackMessageRepository.find({
         where: {
           tenantId,
@@ -206,6 +212,20 @@ export class PatternExtractionService {
         },
         order: { createdDateTime: 'DESC' },
       }),
+      this.gmailMessageRepository.find({
+        where: {
+          tenantId,
+          gmailCreatedAt: MoreThan(startDate),
+        },
+        order: { gmailCreatedAt: 'DESC' },
+      }),
+      this.outlookMessageRepository.find({
+        where: {
+          tenantId,
+          outlookCreatedAt: MoreThan(startDate),
+        },
+        order: { outlookCreatedAt: 'DESC' },
+      }),
     ]);
 
     const patterns: RecurringPattern[] = [];
@@ -214,34 +234,50 @@ export class PatternExtractionService {
     const allMessages = [
       ...slackMessages.map(m => ({ text: m.text || '', date: m.slackCreatedAt, source: 'slack', id: m.id.toString() })),
       ...teamsMessages.map(m => ({ text: m.content || '', date: m.createdDateTime, source: 'teams', id: m.id.toString() })),
+      ...gmailMessages.map(m => ({ text: `${m.subject} ${m.bodyText || ''}`, date: m.gmailCreatedAt, source: 'gmail', id: m.id.toString() })),
+      ...outlookMessages.map(m => ({ text: `${m.subject} ${m.bodyText || ''}`, date: m.outlookCreatedAt, source: 'outlook', id: m.id.toString() })),
     ];
 
     const keywordFrequency = this.extractKeywords(allMessages);
 
-    // Detect spikes in keyword usage
+    // Detect spikes in keyword usage - analyze per source to create separate patterns
     for (const [keyword, mentions] of Object.entries(keywordFrequency)) {
-      if (mentions.length >= 5) { // At least 5 mentions
-        const recentMentions = mentions.filter(m => m.date.getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000);
-        const olderMentions = mentions.filter(m => m.date.getTime() <= Date.now() - 7 * 24 * 60 * 60 * 1000);
+      // Group mentions by source first
+      const mentionsBySource = {
+        slack: mentions.filter(m => m.source === 'slack'),
+        teams: mentions.filter(m => m.source === 'teams'),
+        gmail: mentions.filter(m => m.source === 'gmail'),
+        outlook: mentions.filter(m => m.source === 'outlook'),
+      };
 
-        const recentRate = recentMentions.length / 7;
-        const historicalRate = olderMentions.length / (mentions.length > 7 ? (mentions.length - 7) : 1);
+      // Analyze each source independently
+      for (const [source, sourceMentions] of Object.entries(mentionsBySource)) {
+        // Skip if this source doesn't have enough mentions
+        if (sourceMentions.length < 5) continue;
 
-        // Spike detected if recent rate is 2x historical rate
-        if (recentRate > historicalRate * 2 && recentMentions.length >= 3) {
-          const confidence = Math.min(95, 60 + (recentRate / historicalRate) * 10);
+        const sourceRecentMentions = sourceMentions.filter(m => m.date.getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const sourceOlderMentions = sourceMentions.filter(m => m.date.getTime() <= Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+        const sourceRecentRate = sourceRecentMentions.length / 7;
+        const sourceHistoricalRate = sourceOlderMentions.length > 0
+          ? sourceOlderMentions.length / Math.max(1, (sourceMentions.length - sourceRecentMentions.length) / 7)
+          : 0.1; // Small baseline if no historical data
+
+        // Check if this source has a spike (2x increase) and at least 3 recent mentions
+        if (sourceRecentRate > sourceHistoricalRate * 2 && sourceRecentMentions.length >= 3) {
+          const sourceConfidence = Math.min(95, 60 + (sourceRecentRate / sourceHistoricalRate) * 10);
 
           patterns.push({
-            patternId: `keyword_spike_${this.hashString(keyword)}`,
+            patternId: `keyword_spike_${this.hashString(keyword)}_${source}`,
             type: 'keyword_spike',
-            description: `Keyword spike detected: "${keyword}" mentioned ${recentMentions.length}x in last 7 days (${Math.round(recentRate / historicalRate)}x increase)`,
-            occurrences: recentMentions.length,
+            description: `Keyword spike detected: "${keyword}" mentioned ${sourceRecentMentions.length}x in last 7 days (${Math.round(sourceRecentRate / sourceHistoricalRate)}x increase)`,
+            occurrences: sourceRecentMentions.length,
             frequency: 'irregular',
-            lastOccurrence: recentMentions[recentMentions.length - 1].date,
+            lastOccurrence: sourceRecentMentions[sourceRecentMentions.length - 1].date,
             predictedNext: null,
-            similarities: mentions.map(m => m.text.substring(0, 100)),
-            confidenceScore: confidence,
-            evidence: recentMentions.map(m => ({
+            similarities: sourceMentions.map(m => m.text.substring(0, 100)),
+            confidenceScore: sourceConfidence,
+            evidence: sourceRecentMentions.map(m => ({
               source: m.source,
               sourceId: m.id,
               timestamp: m.date,

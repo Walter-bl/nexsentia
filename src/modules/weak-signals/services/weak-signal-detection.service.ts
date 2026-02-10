@@ -53,6 +53,15 @@ export class WeakSignalDetectionService {
   }
 
   /**
+   * Delete all weak signals for a tenant
+   */
+  async deleteAllSignals(tenantId: number): Promise<number> {
+    const result = await this.weakSignalRepository.delete({ tenantId });
+    this.logger.log(`Deleted ${result.affected || 0} weak signals for tenant ${tenantId}`);
+    return result.affected || 0;
+  }
+
+  /**
    * Get weak signals for a tenant with filtering
    */
   async getWeakSignals(
@@ -387,6 +396,10 @@ export class WeakSignalDetectionService {
       return `Team Communication Surge: ${Math.abs(changePercent)}% More Messages`;
     } else if (metric.includes('Teams Message') || metric.includes('teams')) {
       return `Teams Activity Spike: ${Math.abs(changePercent)}% Increase`;
+    } else if (metric.includes('Gmail') || metric.includes('gmail')) {
+      return `Gmail Email Volume Spike: ${Math.abs(changePercent)}% More Emails`;
+    } else if (metric.includes('Outlook') || metric.includes('outlook')) {
+      return `Outlook Email Surge: ${Math.abs(changePercent)}% Increase`;
     } else if (metric.includes('Resolution Time')) {
       if (changePercent > 0) {
         return `Resolution Times Increasing: ${Math.abs(changePercent)}% Slower`;
@@ -445,6 +458,20 @@ export class WeakSignalDetectionService {
         type: 'system',
         id: 'teams',
         name: 'Teams',
+        impactLevel: 'medium',
+      });
+    } else if (metricKey.includes('gmail')) {
+      entities.push({
+        type: 'system',
+        id: 'gmail',
+        name: 'Gmail',
+        impactLevel: 'medium',
+      });
+    } else if (metricKey.includes('outlook')) {
+      entities.push({
+        type: 'system',
+        id: 'outlook',
+        name: 'Outlook',
         impactLevel: 'medium',
       });
     } else if (metricKey.includes('jira')) {

@@ -6,6 +6,8 @@ import { JiraIssue } from '../../jira/entities/jira-issue.entity';
 import { ServiceNowIncident } from '../../servicenow/entities/servicenow-incident.entity';
 import { SlackMessage } from '../../slack/entities/slack-message.entity';
 import { TeamsMessage } from '../../teams/entities/teams-message.entity';
+import { GmailMessage } from '../../gmail/entities/gmail-message.entity';
+import { OutlookMessage } from '../../outlook/entities/outlook-message.entity';
 import { TimelineEvent } from '../../timeline/entities/timeline-event.entity';
 
 export interface TrendAcceleration {
@@ -44,6 +46,10 @@ export class TrendAccelerationService {
     private readonly slackMessageRepository: Repository<SlackMessage>,
     @InjectRepository(TeamsMessage)
     private readonly teamsMessageRepository: Repository<TeamsMessage>,
+    @InjectRepository(GmailMessage)
+    private readonly gmailMessageRepository: Repository<GmailMessage>,
+    @InjectRepository(OutlookMessage)
+    private readonly outlookMessageRepository: Repository<OutlookMessage>,
     @InjectRepository(TimelineEvent)
     private readonly timelineEventRepository: Repository<TimelineEvent>,
   ) {}

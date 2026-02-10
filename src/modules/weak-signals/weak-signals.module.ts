@@ -16,6 +16,8 @@ import { JiraIssue } from '../jira/entities/jira-issue.entity';
 import { ServiceNowIncident } from '../servicenow/entities/servicenow-incident.entity';
 import { SlackMessage } from '../slack/entities/slack-message.entity';
 import { TeamsMessage } from '../teams/entities/teams-message.entity';
+import { GmailMessage } from '../gmail/entities/gmail-message.entity';
+import { OutlookMessage } from '../outlook/entities/outlook-message.entity';
 import { TimelineEvent } from '../timeline/entities/timeline-event.entity';
 import { MetricValue } from '../kpi/entities/metric-value.entity';
 import { MetricDefinition } from '../kpi/entities/metric-definition.entity';
@@ -31,6 +33,8 @@ import { Tenant } from '../tenants/entities/tenant.entity';
       ServiceNowIncident,
       SlackMessage,
       TeamsMessage,
+      GmailMessage,
+      OutlookMessage,
       TimelineEvent,
       MetricValue,
       MetricDefinition,
