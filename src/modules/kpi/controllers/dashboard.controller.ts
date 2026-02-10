@@ -133,7 +133,7 @@ export class DashboardController {
     console.log('[OrganizationalPulse] Business impacts:', impacts.length, 'Total hours lost:', totalHoursLost);
 
     // Group impacts by month for business escalations chart
-    const escalationsByMonth = this.groupImpactsByMonthWithHours(impacts, start, end);
+    const escalationsByMonth = this.groupImpactsByMonthWithHours(impacts, start, end, timeRange);
     console.log('[OrganizationalPulse] Escalations by month:', JSON.stringify(escalationsByMonth, null, 2));
 
     // Calculate strategic alignment metrics
@@ -616,13 +616,14 @@ export class DashboardController {
     }, 0);
   }
 
-  private groupImpactsByMonthWithHours(impacts: any[], start: Date, end: Date) {
+  private groupImpactsByMonthWithHours(impacts: any[], start: Date, end: Date, timeRange?: '7d' | '14d' | '1m' | '3m' | '6m' | '1y') {
     const monthlyData = [];
     const current = new Date(start.getFullYear(), start.getMonth(), 1);
     const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
 
     console.log('[groupImpactsByMonthWithHours] Processing', impacts.length, 'impacts from', start, 'to', end);
     console.log('[groupImpactsByMonthWithHours] Month range:', current, 'to', endMonth);
+    console.log('[groupImpactsByMonthWithHours] TimeRange:', timeRange);
 
     while (current <= endMonth) {
       const monthStart = new Date(current);
@@ -656,7 +657,24 @@ export class DashboardController {
       current.setMonth(current.getMonth() + 1);
     }
 
-    return monthlyData;
+    // Sort by month descending (newest first)
+    monthlyData.sort((a, b) => b.month.localeCompare(a.month));
+
+    // Limit the number of months based on timeRange
+    // For 1m show 1 month, for 3m show 3 months, etc.
+    let monthsToShow = monthlyData.length;
+    if (timeRange === '1m') {
+      monthsToShow = 1;
+    } else if (timeRange === '3m') {
+      monthsToShow = 3;
+    } else if (timeRange === '6m') {
+      monthsToShow = 6;
+    } else if (timeRange === '1y') {
+      monthsToShow = 12;
+    }
+
+    console.log('[groupImpactsByMonthWithHours] Limiting to', monthsToShow, 'months');
+    return monthlyData.slice(0, monthsToShow);
   }
 
   private calculateStrategicAlignment(metrics: any[]) {
@@ -939,6 +957,11 @@ export class DashboardController {
 
     // Calculate overall score for each team
     for (const [team, teamMetrics] of teamMap.entries()) {
+      // Filter out randomly generated team names (Team_[8 alphanumeric chars])
+      if (/^Team_[A-Z0-9]{8}$/.test(team)) {
+        continue;
+      }
+
       const statusScores = teamMetrics.map(m => {
         const status = m.status;
         return status === 'excellent' ? 100 : status === 'good' ? 75 : status === 'warning' ? 50 : 25;

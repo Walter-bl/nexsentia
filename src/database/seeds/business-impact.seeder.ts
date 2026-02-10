@@ -32,8 +32,10 @@ export async function seedBusinessImpacts(dataSource: DataSource, tenantId: numb
 
   // Map ServiceNow incidents to business impacts
   for (const incident of criticalIncidents) {
-    // Only create impacts for critical/high priority incidents
-    if (!incident.priority?.includes('1 - Critical') && !incident.priority?.includes('2 - High')) {
+    // Create impacts for critical, high, and moderate priority incidents
+    if (!incident.priority?.includes('1 - Critical') &&
+        !incident.priority?.includes('2 - High') &&
+        !incident.priority?.includes('3 - Moderate')) {
       continue;
     }
 
@@ -117,8 +119,8 @@ export async function seedBusinessImpacts(dataSource: DataSource, tenantId: numb
 
   // Map critical JIRA issues to business impacts
   for (const issue of criticalIssues) {
-    // Only create impacts for critical/high priority issues
-    if (issue.priority !== 'critical' && issue.priority !== 'high') {
+    // Create impacts for critical, high, and medium priority issues
+    if (issue.priority !== 'critical' && issue.priority !== 'high' && issue.priority !== 'medium') {
       continue;
     }
 
@@ -189,12 +191,125 @@ export async function seedBusinessImpacts(dataSource: DataSource, tenantId: numb
     });
   }
 
+  // Generate additional auto-generated business impacts with ACCELERATION pattern
+  // This ensures we have enough data distributed across time periods
+  const now = new Date();
+  const additionalImpacts: Partial<BusinessImpact>[] = [];
+
+  for (let i = 0; i < 500; i++) {
+    let daysAgo: number;
+
+    if (i < 300) {
+      // 60% of impacts in last 30 days (HIGH recent activity)
+      daysAgo = Math.floor(Math.random() * 30);
+    } else if (i < 425) {
+      // 25% of impacts in 30-60 days ago (MODERATE activity)
+      daysAgo = Math.floor(Math.random() * 30) + 30;
+    } else {
+      // 15% of impacts in 60-90 days ago (LOW baseline activity)
+      daysAgo = Math.floor(Math.random() * 30) + 60;
+    }
+
+    const hoursOffset = Math.floor(Math.random() * 24);
+    const minutesOffset = Math.floor(Math.random() * 60);
+
+    const impactDate = new Date(now);
+    impactDate.setDate(impactDate.getDate() - daysAgo);
+    impactDate.setHours(hoursOffset);
+    impactDate.setMinutes(minutesOffset);
+
+    // Randomly determine if resolved
+    const isResolved = Math.random() > 0.3; // 70% resolved
+    let resolvedDate: Date | undefined;
+    let durationMinutes: number;
+
+    if (isResolved) {
+      // Resolution takes 30 minutes to 48 hours
+      durationMinutes = Math.floor(30 + Math.random() * (48 * 60 - 30));
+      resolvedDate = new Date(impactDate.getTime() + durationMinutes * 60 * 1000);
+    } else {
+      // Ongoing - assume some time has passed
+      durationMinutes = Math.floor(30 + Math.random() * 480); // 30 mins to 8 hours
+    }
+
+    // Random severity distribution
+    const severityRand = Math.random();
+    let severity: string;
+    let revenuePerHour: number;
+    let customersAffected: number;
+
+    if (severityRand < 0.15) {
+      // 15% critical
+      severity = 'critical';
+      revenuePerHour = 5000 + Math.random() * 10000;
+      customersAffected = Math.floor(50 + Math.random() * 200);
+    } else if (severityRand < 0.35) {
+      // 20% high
+      severity = 'high';
+      revenuePerHour = 1000 + Math.random() * 4000;
+      customersAffected = Math.floor(10 + Math.random() * 90);
+    } else if (severityRand < 0.70) {
+      // 35% medium
+      severity = 'medium';
+      revenuePerHour = 200 + Math.random() * 800;
+      customersAffected = Math.floor(5 + Math.random() * 45);
+    } else {
+      // 30% low
+      severity = 'low';
+      revenuePerHour = 50 + Math.random() * 150;
+      customersAffected = Math.floor(1 + Math.random() * 19);
+    }
+
+    const estimatedRevenueLoss = (durationMinutes / 60) * revenuePerHour;
+
+    // Random impact type
+    const impactTypes = ['incident', 'bug', 'outage', 'performance_degradation'];
+    const impactType = impactTypes[Math.floor(Math.random() * impactTypes.length)];
+
+    additionalImpacts.push({
+      tenantId,
+      sourceType: Math.random() > 0.5 ? 'servicenow' : 'jira',
+      sourceId: `AUTO_${i + 1}`,
+      impactType,
+      estimatedRevenueLoss: Math.round(estimatedRevenueLoss * 100) / 100,
+      actualRevenueLoss: isResolved ? Math.round(estimatedRevenueLoss * 0.9 * 100) / 100 : undefined,
+      customersAffected,
+      usersAffected: customersAffected * Math.floor(2 + Math.random() * 8),
+      durationMinutes,
+      impactDate,
+      resolvedDate,
+      severity,
+      revenueMapping: {
+        affectedServices: ['Service'],
+        revenuePerHour,
+        recurringRevenueImpact: 0,
+        oneTimeRevenueLoss: estimatedRevenueLoss,
+        methodology: 'auto_generated',
+      },
+      lossEstimation: {
+        directCosts: estimatedRevenueLoss * 0.7,
+        indirectCosts: estimatedRevenueLoss * 0.2,
+        opportunityCost: estimatedRevenueLoss * 0.1,
+        reputationImpact: customersAffected * 100,
+        calculationMethod: 'auto_generated',
+        confidence: 0.75,
+      },
+      metadata: {
+        tags: ['auto-generated'],
+      },
+      isValidated: Math.random() > 0.5,
+      validatedAt: isResolved && Math.random() > 0.5 ? resolvedDate : undefined,
+    });
+  }
+
+  impacts.push(...additionalImpacts);
+
   // Save all impacts
   for (const impactData of impacts) {
     const impact = impactRepo.create(impactData);
     await impactRepo.save(impact);
   }
 
-  console.log(`  ✅ Created ${impacts.length} business impact records`);
+  console.log(`  ✅ Created ${impacts.length} business impact records (${additionalImpacts.length} auto-generated)`);
   console.log('');
 }
