@@ -340,14 +340,64 @@ export class WeakSignalDetectionService {
    * Generate title for pattern
    */
   private generatePatternTitle(pattern: RecurringPattern): string {
-    return `Recurring Pattern: ${pattern.type.replace(/_/g, ' ')} (${pattern.occurrences}x, ${pattern.frequency})`;
+    // Extract meaningful information from the pattern
+    const occurrences = pattern.occurrences;
+    const frequency = pattern.frequency;
+
+    // Create user-friendly titles based on pattern type
+    if (pattern.type === 'incident_recurrence') {
+      if (frequency === 'daily') {
+        return `Critical: Daily Incident Pattern (${occurrences} occurrences)`;
+      } else if (frequency === 'weekly') {
+        return `High Alert: Weekly Incident Pattern (${occurrences} occurrences)`;
+      } else {
+        return `Recurring Incident Pattern (${occurrences} times this month)`;
+      }
+    } else if (pattern.type === 'issue_recurrence') {
+      if (frequency === 'daily') {
+        return `Critical: Same Issue Reported Daily (${occurrences}x)`;
+      } else if (frequency === 'weekly') {
+        return `Recurring Issue: ${occurrences} Times This Week`;
+      } else {
+        return `Repeated Issue Pattern (${occurrences} reports)`;
+      }
+    } else if (pattern.type === 'keyword_spike') {
+      return `Communication Alert: Keyword Spike Detected (${occurrences}x increase)`;
+    } else {
+      // Fallback for other pattern types
+      const readableType = pattern.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      return `${readableType} (${occurrences}x, ${frequency})`;
+    }
   }
 
   /**
    * Generate title for acceleration
    */
   private generateAccelerationTitle(acceleration: TrendAcceleration): string {
-    return `Trend Acceleration: ${acceleration.metric} (${acceleration.accelerationFactor.toFixed(1)}x faster)`;
+    const metric = acceleration.metric;
+    const factor = acceleration.accelerationFactor;
+    const changePercent = Math.round(acceleration.changeRate);
+
+    // Create user-friendly titles based on metric type
+    if (metric.includes('Incident Rate') || metric.includes('incident')) {
+      return `Incident Volume Surge: ${Math.abs(changePercent)}% Increase`;
+    } else if (metric.includes('Issue Creation') || metric.includes('issue')) {
+      return `Issue Creation Spike: ${factor.toFixed(1)}x Faster Than Normal`;
+    } else if (metric.includes('Slack Message') || metric.includes('slack')) {
+      return `Team Communication Surge: ${Math.abs(changePercent)}% More Messages`;
+    } else if (metric.includes('Teams Message') || metric.includes('teams')) {
+      return `Teams Activity Spike: ${Math.abs(changePercent)}% Increase`;
+    } else if (metric.includes('Resolution Time')) {
+      if (changePercent > 0) {
+        return `Resolution Times Increasing: ${Math.abs(changePercent)}% Slower`;
+      } else {
+        return `Resolution Times Improving: ${Math.abs(changePercent)}% Faster`;
+      }
+    } else {
+      // Fallback for other metrics
+      const readableMetric = metric.replace(/_/g, ' ').replace(/Rate$/, '');
+      return `${readableMetric}: ${factor.toFixed(1)}x Acceleration`;
+    }
   }
 
   /**
