@@ -192,7 +192,6 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
 
   const additionalMessages = [];
   const now = new Date();
-  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
 
   // Generate 990 additional messages (1000 total - 10 existing)
   // CREATE ACCELERATION PATTERN: MORE recent messages to trigger trend detection
@@ -243,8 +242,9 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
 
     const hoursOffset = Math.floor(Math.random() * 24);
     const minutesOffset = Math.floor(Math.random() * 60);
-    const messageDate = new Date(ninetyDaysAgo);
-    messageDate.setDate(messageDate.getDate() + daysAgo);
+    // CRITICAL: Calculate from NOW going BACKWARD, not from 90 days ago going forward
+    const messageDate = new Date(now);
+    messageDate.setDate(messageDate.getDate() - daysAgo);
     messageDate.setHours(hoursOffset);
     messageDate.setMinutes(minutesOffset);
 

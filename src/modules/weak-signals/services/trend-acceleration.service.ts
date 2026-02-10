@@ -250,6 +250,8 @@ export class TrendAccelerationService {
       }),
     ]);
 
+    this.logger.debug(`Communication data found: Slack=${slackMessages.length}, Teams=${teamsMessages.length} messages (${daysBack} days back from ${startDate.toISOString()})`);
+
     // Analyze Slack message rate
     if (slackMessages.length > 10) {
       const slackDailyCounts = this.aggregateByDay(slackMessages.map(m => m.slackCreatedAt || m.createdAt));

@@ -157,7 +157,6 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
   // Strategy: Create MORE issues in recent 30 days to trigger acceleration detection
   const additionalJiraIssues = [];
   const now = new Date();
-  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
 
   const issueSummaries = [
     'API endpoint performance degradation',
@@ -198,8 +197,9 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
 
     const hoursOffset = Math.floor(Math.random() * 24);
     const minutesOffset = Math.floor(Math.random() * 60);
-    const createdDate = new Date(ninetyDaysAgo);
-    createdDate.setDate(createdDate.getDate() + daysAgo);
+    // CRITICAL: Calculate from NOW going BACKWARD, not from 90 days ago going forward
+    const createdDate = new Date(now);
+    createdDate.setDate(createdDate.getDate() - daysAgo);
     createdDate.setHours(hoursOffset);
     createdDate.setMinutes(minutesOffset);
 

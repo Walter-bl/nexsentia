@@ -118,7 +118,6 @@ export async function seedServiceNowData(dataSource: DataSource, tenantId: numbe
 
   const additionalIncidents: any[] = [];
   const now = new Date();
-  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
 
   // Generate 991 additional incidents (1000 total - 9 existing)
   // CREATE ACCELERATION PATTERN: 60% recent, 25% mid, 15% old
@@ -143,8 +142,9 @@ export async function seedServiceNowData(dataSource: DataSource, tenantId: numbe
     }
     const hoursOffset = Math.floor(Math.random() * 24);
     const minutesOffset = Math.floor(Math.random() * 60);
-    const openedDate = new Date(ninetyDaysAgo);
-    openedDate.setDate(openedDate.getDate() + daysAgo);
+    // CRITICAL: Calculate from NOW going BACKWARD, not from 90 days ago going forward
+    const openedDate = new Date(now);
+    openedDate.setDate(openedDate.getDate() - daysAgo);
     openedDate.setHours(hoursOffset);
     openedDate.setMinutes(minutesOffset);
 

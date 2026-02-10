@@ -20,7 +20,7 @@ if [ "$IS_LEADER" = true ]; then
   cd /var/app/current
 
   # Run seeders using production command
-  if npm run seed:run:prod; then
+  if npm run seed:prod; then
     echo 'Seeders completed successfully'
   else
     echo 'Warning: Seeder command failed or no seeders to run'
