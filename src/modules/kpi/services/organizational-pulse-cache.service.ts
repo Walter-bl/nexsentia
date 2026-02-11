@@ -199,7 +199,7 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
       }
 
       // Preload for most common time ranges
-      const timeRanges: Array<'1m' | '3m' | '6m'> = ['1m', '3m', '6m'];
+      const timeRanges: Array<'7d' | '14d' | '1m' | '3m' | '6m' | '1y'> = ['7d', '14d', '1m', '3m', '6m', '1y'];
 
       let successCount = 0;
       let skipCount = 0;

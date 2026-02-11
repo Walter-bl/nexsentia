@@ -78,13 +78,23 @@ export class KpiModule implements OnModuleInit {
   constructor(private moduleRef: ModuleRef) {}
 
   async onModuleInit() {
+    console.log('[KpiModule] onModuleInit - Wiring up organizational pulse services...');
+
     // Wire up the pulse service to the cache service after module initialization
     // This avoids circular dependency issues
     const cacheService = this.moduleRef.get(OrganizationalPulseCacheService, { strict: false });
     const pulseService = this.moduleRef.get(OrganizationalPulseService, { strict: false });
 
+    console.log('[KpiModule] Services found:', {
+      cacheService: !!cacheService,
+      pulseService: !!pulseService,
+    });
+
     if (cacheService && pulseService) {
       cacheService.setPulseService(pulseService);
+      console.log('[KpiModule] ✅ Pulse service successfully set on cache service');
+    } else {
+      console.error('[KpiModule] ❌ Failed to wire services - one or both services not found');
     }
   }
 }
