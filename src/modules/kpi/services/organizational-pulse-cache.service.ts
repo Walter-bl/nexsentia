@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject, forwardRef, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -23,12 +23,12 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
   // Track tenants for preloading
   private activeTenants: Set<number> = new Set();
 
+  private pulseService: OrganizationalPulseService;
+
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @InjectRepository(MetricDefinition)
     private readonly metricDefinitionRepository: Repository<MetricDefinition>,
-    @Inject(forwardRef(() => OrganizationalPulseService))
-    private readonly pulseService: OrganizationalPulseService,
   ) {}
 
   /**
@@ -122,21 +122,35 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
   }
 
   /**
+   * Set the pulse service (called by the module after initialization)
+   * This avoids circular dependency issues
+   */
+  setPulseService(pulseService: OrganizationalPulseService): void {
+    this.pulseService = pulseService;
+  }
+
+  /**
    * Preload organizational pulse data on application startup
    * This warms the cache so first user requests are fast
    */
   async onModuleInit(): Promise<void> {
-    this.logger.log('🔥 Warming organizational pulse cache on startup...');
+    this.logger.log('🔥 Scheduling organizational pulse cache warming...');
 
     // Don't block application startup - run preload asynchronously
+    // Give more time for dependencies to initialize (20 seconds)
     setTimeout(async () => {
       try {
+        if (!this.pulseService) {
+          this.logger.warn('⚠️  Pulse service not initialized yet, skipping preload');
+          return;
+        }
+        this.logger.log('🔥 Starting cache warming...');
         await this.preloadOrganizationalPulse();
         this.logger.log('✅ Startup cache warming completed');
       } catch (error) {
-        this.logger.error('❌ Startup cache warming failed:', error);
+        this.logger.error('❌ Startup cache warming failed:', error.stack || error.message);
       }
-    }, 5000); // Wait 5 seconds after startup to let the app initialize
+    }, 20000); // Wait 20 seconds after startup to let the app fully initialize
   }
 
   /**
@@ -147,56 +161,79 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
    */
   @Cron(CronExpression.EVERY_4_HOURS)
   async preloadOrganizationalPulse(): Promise<void> {
-    this.logger.log('🔄 Starting organizational pulse preload job');
-
-    // Get distinct tenants from metric definitions
-    const tenants = await this.metricDefinitionRepository
-      .createQueryBuilder('md')
-      .select('DISTINCT md.tenantId', 'tenantId')
-      .where('md.isActive = :isActive', { isActive: true })
-      .getRawMany();
-
-    const tenantIds = tenants.map(t => t.tenantId);
-    this.logger.log(`Found ${tenantIds.length} active tenants to preload`);
-
-    // Preload for most common time ranges
-    const timeRanges: Array<'1m' | '3m' | '6m'> = ['1m', '3m', '6m'];
-
-    let successCount = 0;
-    let skipCount = 0;
-    let errorCount = 0;
-
-    for (const tenantId of tenantIds) {
-      // Register tenant for tracking
-      this.registerTenant(tenantId);
-
-      for (const timeRange of timeRanges) {
-        try {
-          // Check if data is already cached
-          const cached = await this.get(tenantId, timeRange);
-          if (cached) {
-            this.logger.debug(`⏭️  Skipping tenant ${tenantId}, timeRange ${timeRange} (already cached)`);
-            skipCount++;
-            continue;
-          }
-
-          // ACTUAL PRELOADING: Calculate and cache the data
-          this.logger.log(`🔥 Preloading tenant ${tenantId}, timeRange ${timeRange}...`);
-          const data = await this.pulseService.calculateOrganizationalPulse(tenantId, timeRange);
-
-          // Store in cache
-          await this.set(tenantId, timeRange, data);
-          successCount++;
-          this.logger.log(`✅ Preloaded tenant ${tenantId}, timeRange ${timeRange}`);
-        } catch (error) {
-          errorCount++;
-          this.logger.error(`❌ Failed to preload tenant ${tenantId}, timeRange ${timeRange}:`, error.message);
-          // Continue with other tenants even if one fails
-        }
-      }
+    if (!this.pulseService) {
+      this.logger.error('❌ Pulse service not available, cannot preload');
+      return;
     }
 
-    this.logger.log(`🎉 Organizational pulse preload job completed: ${successCount} preloaded, ${skipCount} skipped, ${errorCount} errors`);
+    this.logger.log('🔄 Starting organizational pulse preload job');
+
+    try {
+      // Get distinct tenants from metric definitions
+      const tenants = await this.metricDefinitionRepository
+        .createQueryBuilder('md')
+        .select('DISTINCT md.tenantId', 'tenantId')
+        .where('md.isActive = :isActive', { isActive: true })
+        .getRawMany();
+
+      const tenantIds = tenants.map(t => t.tenantId);
+      this.logger.log(`Found ${tenantIds.length} active tenants to preload`);
+
+      if (tenantIds.length === 0) {
+        this.logger.warn('⚠️  No active tenants found to preload');
+        return;
+      }
+
+      // Preload for most common time ranges
+      const timeRanges: Array<'1m' | '3m' | '6m'> = ['1m', '3m', '6m'];
+
+      let successCount = 0;
+      let skipCount = 0;
+      let errorCount = 0;
+
+      for (const tenantId of tenantIds) {
+        // Register tenant for tracking
+        this.registerTenant(tenantId);
+
+        for (const timeRange of timeRanges) {
+          try {
+            // Check if data is already cached
+            const cached = await this.get(tenantId, timeRange);
+            if (cached) {
+              this.logger.debug(`⏭️  Skipping tenant ${tenantId}, timeRange ${timeRange} (already cached)`);
+              skipCount++;
+              continue;
+            }
+
+            // ACTUAL PRELOADING: Calculate and cache the data
+            this.logger.log(`🔥 Preloading tenant ${tenantId}, timeRange ${timeRange}...`);
+            const startTime = Date.now();
+
+            const data = await this.pulseService.calculateOrganizationalPulse(tenantId, timeRange);
+
+            // Store in cache
+            await this.set(tenantId, timeRange, data);
+
+            const duration = Date.now() - startTime;
+            successCount++;
+            this.logger.log(`✅ Preloaded tenant ${tenantId}, timeRange ${timeRange} in ${duration}ms`);
+          } catch (error) {
+            errorCount++;
+            this.logger.error(
+              `❌ Failed to preload tenant ${tenantId}, timeRange ${timeRange}:`,
+              error.stack || error.message
+            );
+            // Continue with other tenants even if one fails
+          }
+        }
+      }
+
+      this.logger.log(
+        `🎉 Organizational pulse preload job completed: ${successCount} preloaded, ${skipCount} skipped, ${errorCount} errors`
+      );
+    } catch (error) {
+      this.logger.error('❌ Preload job failed:', error.stack || error.message);
+    }
   }
 
   /**

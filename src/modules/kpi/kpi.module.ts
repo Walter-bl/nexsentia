@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
+import { ModuleRef } from '@nestjs/core';
 
 // Entities
 import { MetricDefinition } from './entities/metric-definition.entity';
@@ -73,4 +74,17 @@ import { KpiSeedController } from './controllers/kpi-seed.controller';
     TeamImpactService,
   ],
 })
-export class KpiModule {}
+export class KpiModule implements OnModuleInit {
+  constructor(private moduleRef: ModuleRef) {}
+
+  async onModuleInit() {
+    // Wire up the pulse service to the cache service after module initialization
+    // This avoids circular dependency issues
+    const cacheService = this.moduleRef.get(OrganizationalPulseCacheService, { strict: false });
+    const pulseService = this.moduleRef.get(OrganizationalPulseService, { strict: false });
+
+    if (cacheService && pulseService) {
+      cacheService.setPulseService(pulseService);
+    }
+  }
+}

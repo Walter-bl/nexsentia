@@ -17,6 +17,8 @@ export class OpenAIService {
 
     this.openai = new OpenAI({
       apiKey: apiKey || 'dummy-key',
+      timeout: 120000, // 2 minutes timeout for API calls
+      maxRetries: 2, // Retry failed requests twice
     });
 
     this.model = this.configService.get<string>('OPENAI_MODEL', 'gpt-4-turbo-preview');
@@ -37,7 +39,22 @@ export class OpenAIService {
       };
     } catch (error) {
       this.logger.error('OpenAI API error:', error);
-      throw new Error('Failed to get response from AI service');
+
+      // Check for specific error types
+      if (error.message?.includes('timeout')) {
+        throw new Error('AI service request timed out. Please try again.');
+      }
+      if (error.message?.includes('network')) {
+        throw new Error('Network error connecting to AI service. Please check your connection.');
+      }
+      if (error.status === 429) {
+        throw new Error('AI service rate limit exceeded. Please try again in a moment.');
+      }
+      if (error.status === 401) {
+        throw new Error('AI service authentication failed. Please contact support.');
+      }
+
+      throw new Error('Failed to get response from AI service. Please try again.');
     }
   }
 
@@ -73,7 +90,19 @@ export class OpenAIService {
       return fullContent;
     } catch (error) {
       this.logger.error('OpenAI streaming API error:', error);
-      throw new Error('Failed to get streaming response from AI service');
+
+      // Check for specific error types
+      if (error.message?.includes('timeout')) {
+        throw new Error('AI service request timed out. Please try again.');
+      }
+      if (error.message?.includes('network')) {
+        throw new Error('Network error during streaming. Please check your connection.');
+      }
+      if (error.status === 429) {
+        throw new Error('AI service rate limit exceeded. Please try again in a moment.');
+      }
+
+      throw new Error('Failed to get streaming response from AI service. Please try again.');
     }
   }
 
