@@ -23,6 +23,7 @@ import { BusinessImpactService } from './services/business-impact.service';
 import { KpiValidationService } from './services/kpi-validation.service';
 import { TeamImpactService } from './services/team-impact.service';
 import { OrganizationalPulseCacheService } from './services/organizational-pulse-cache.service';
+import { OrganizationalPulseService } from './services/organizational-pulse.service';
 
 // Controllers
 import { MetricsController } from './controllers/metrics.controller';
@@ -61,6 +62,7 @@ import { KpiSeedController } from './controllers/kpi-seed.controller';
     BusinessImpactService,
     KpiValidationService,
     TeamImpactService,
+    OrganizationalPulseService,
     OrganizationalPulseCacheService,
   ],
   exports: [

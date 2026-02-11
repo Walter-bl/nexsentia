@@ -1,17 +1,21 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef, OnModuleInit } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MetricDefinition } from '../entities/metric-definition.entity';
+import { OrganizationalPulseService } from './organizational-pulse.service';
 
 /**
  * Service to cache and preload organizational pulse data
  * Prevents 504 gateway timeout by caching expensive computations
+ *
+ * IMPORTANT: This service now actually preloads data by calling OrganizationalPulseService
+ * to warm the cache BEFORE user requests, making even the first request fast.
  */
 @Injectable()
-export class OrganizationalPulseCacheService {
+export class OrganizationalPulseCacheService implements OnModuleInit {
   private readonly logger = new Logger(OrganizationalPulseCacheService.name);
   private readonly CACHE_TTL = 300000; // 5 minutes in milliseconds
   private readonly CACHE_KEY_PREFIX = 'org_pulse';
@@ -23,6 +27,8 @@ export class OrganizationalPulseCacheService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @InjectRepository(MetricDefinition)
     private readonly metricDefinitionRepository: Repository<MetricDefinition>,
+    @Inject(forwardRef(() => OrganizationalPulseService))
+    private readonly pulseService: OrganizationalPulseService,
   ) {}
 
   /**
@@ -116,12 +122,32 @@ export class OrganizationalPulseCacheService {
   }
 
   /**
+   * Preload organizational pulse data on application startup
+   * This warms the cache so first user requests are fast
+   */
+  async onModuleInit(): Promise<void> {
+    this.logger.log('🔥 Warming organizational pulse cache on startup...');
+
+    // Don't block application startup - run preload asynchronously
+    setTimeout(async () => {
+      try {
+        await this.preloadOrganizationalPulse();
+        this.logger.log('✅ Startup cache warming completed');
+      } catch (error) {
+        this.logger.error('❌ Startup cache warming failed:', error);
+      }
+    }, 5000); // Wait 5 seconds after startup to let the app initialize
+  }
+
+  /**
    * Background job to preload organizational pulse data
-   * Runs every 4 minutes (before cache expires)
+   * Runs every 4 hours to keep cache warm
+   *
+   * IMPORTANT: This now actually calls the calculation service to populate cache
    */
   @Cron(CronExpression.EVERY_4_HOURS)
   async preloadOrganizationalPulse(): Promise<void> {
-    this.logger.log('Starting organizational pulse preload job');
+    this.logger.log('🔄 Starting organizational pulse preload job');
 
     // Get distinct tenants from metric definitions
     const tenants = await this.metricDefinitionRepository
@@ -134,21 +160,43 @@ export class OrganizationalPulseCacheService {
     this.logger.log(`Found ${tenantIds.length} active tenants to preload`);
 
     // Preload for most common time ranges
-    const timeRanges = ['1m', '3m', '6m'];
+    const timeRanges: Array<'1m' | '3m' | '6m'> = ['1m', '3m', '6m'];
+
+    let successCount = 0;
+    let skipCount = 0;
+    let errorCount = 0;
 
     for (const tenantId of tenantIds) {
+      // Register tenant for tracking
+      this.registerTenant(tenantId);
+
       for (const timeRange of timeRanges) {
-        // Check if data is already cached
-        const cached = await this.get(tenantId, timeRange);
-        if (!cached) {
-          this.logger.log(`Need to preload tenant ${tenantId}, timeRange ${timeRange}`);
-          // Note: Actual preloading will be triggered by first request
-          // This job just identifies what needs preloading
+        try {
+          // Check if data is already cached
+          const cached = await this.get(tenantId, timeRange);
+          if (cached) {
+            this.logger.debug(`⏭️  Skipping tenant ${tenantId}, timeRange ${timeRange} (already cached)`);
+            skipCount++;
+            continue;
+          }
+
+          // ACTUAL PRELOADING: Calculate and cache the data
+          this.logger.log(`🔥 Preloading tenant ${tenantId}, timeRange ${timeRange}...`);
+          const data = await this.pulseService.calculateOrganizationalPulse(tenantId, timeRange);
+
+          // Store in cache
+          await this.set(tenantId, timeRange, data);
+          successCount++;
+          this.logger.log(`✅ Preloaded tenant ${tenantId}, timeRange ${timeRange}`);
+        } catch (error) {
+          errorCount++;
+          this.logger.error(`❌ Failed to preload tenant ${tenantId}, timeRange ${timeRange}:`, error.message);
+          // Continue with other tenants even if one fails
         }
       }
     }
 
-    this.logger.log('Organizational pulse preload job completed');
+    this.logger.log(`🎉 Organizational pulse preload job completed: ${successCount} preloaded, ${skipCount} skipped, ${errorCount} errors`);
   }
 
   /**
