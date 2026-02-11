@@ -25,6 +25,10 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
 
   private pulseService: OrganizationalPulseService;
 
+  // Track if initial cache warming has completed
+  private isWarmingComplete = false;
+  private warmingPromise: Promise<void> | null = null;
+
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @InjectRepository(MetricDefinition)
@@ -136,35 +140,155 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     this.logger.log('🔥 Scheduling organizational pulse cache warming...');
 
-    // Try multiple times with increasing delays to ensure preload happens
-    const attemptPreload = async (attempt: number, delay: number) => {
-      setTimeout(async () => {
-        try {
-          if (!this.pulseService) {
-            this.logger.warn(`⚠️  Pulse service not initialized yet (attempt ${attempt}/3), skipping preload`);
+    // Start warming in background (non-blocking) but track the promise
+    this.warmingPromise = this.attemptWarmup();
+  }
 
-            // Try again if we still have attempts left
-            if (attempt < 3) {
-              attemptPreload(attempt + 1, delay * 2);
+  /**
+   * Attempt to warm up the cache with retries
+   */
+  private async attemptWarmup(): Promise<void> {
+    const maxAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      // Wait before attempting (gives time for pulse service to be wired)
+      const delay = attempt === 1 ? 5000 : 10000 * attempt;
+      await this.sleep(delay);
+
+      try {
+        if (!this.pulseService) {
+          this.logger.warn(`⚠️  Pulse service not initialized yet (attempt ${attempt}/${maxAttempts})`);
+          continue;
+        }
+
+        this.logger.log(`🔥 Starting cache warming (attempt ${attempt}/${maxAttempts})...`);
+        const startTime = Date.now();
+
+        // On startup, only preload the most common time range (3m) for speed
+        await this.preloadStartupCache();
+
+        const duration = Date.now() - startTime;
+        this.isWarmingComplete = true;
+        this.logger.log(`✅ Startup cache warming completed successfully in ${duration}ms`);
+        return; // Success, exit retry loop
+
+      } catch (error) {
+        this.logger.error(
+          `❌ Startup cache warming failed (attempt ${attempt}/${maxAttempts}):`,
+          error.stack || error.message
+        );
+
+        if (attempt === maxAttempts) {
+          this.logger.error('❌ All cache warming attempts exhausted. Cache will warm on first request.');
+        }
+      }
+    }
+  }
+
+  /**
+   * Preload only the most critical time ranges on startup (fast)
+   * This ensures the first user request is fast
+   */
+  private async preloadStartupCache(): Promise<void> {
+    try {
+      // Get distinct tenants from metric definitions
+      const tenants = await this.metricDefinitionRepository
+        .createQueryBuilder('md')
+        .select('DISTINCT md.tenantId', 'tenantId')
+        .where('md.isActive = :isActive', { isActive: true })
+        .getRawMany();
+
+      const tenantIds = tenants.map(t => t.tenantId);
+      this.logger.log(`[StartupCache] Found ${tenantIds.length} active tenants to preload`);
+
+      if (tenantIds.length === 0) {
+        this.logger.warn('⚠️  No active tenants found to preload');
+        return;
+      }
+
+      // Only preload the most common time ranges on startup (3m and 7d)
+      const startupTimeRanges: Array<'7d' | '3m'> = ['3m', '7d'];
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const tenantId of tenantIds) {
+        this.registerTenant(tenantId);
+
+        for (const timeRange of startupTimeRanges) {
+          try {
+            // Check if already cached
+            const cached = await this.get(tenantId, timeRange);
+            if (cached) {
+              this.logger.debug(`[StartupCache] ⏭️  Skipping tenant ${tenantId}, timeRange ${timeRange} (already cached)`);
+              continue;
             }
-            return;
-          }
-          this.logger.log(`🔥 Starting cache warming (attempt ${attempt})...`);
-          await this.preloadOrganizationalPulse();
-          this.logger.log('✅ Startup cache warming completed successfully');
-        } catch (error) {
-          this.logger.error(`❌ Startup cache warming failed (attempt ${attempt}):`, error.stack || error.message);
 
-          // Retry on error for up to 3 attempts
-          if (attempt < 3) {
-            attemptPreload(attempt + 1, delay * 2);
+            // Preload this time range
+            this.logger.log(`[StartupCache] 🔥 Preloading tenant ${tenantId}, timeRange ${timeRange}...`);
+            const startTime = Date.now();
+
+            const data = await this.pulseService.calculateOrganizationalPulse(tenantId, timeRange);
+            await this.set(tenantId, timeRange, data);
+
+            const duration = Date.now() - startTime;
+            successCount++;
+            this.logger.log(`[StartupCache] ✅ Preloaded tenant ${tenantId}, timeRange ${timeRange} in ${duration}ms`);
+          } catch (error) {
+            errorCount++;
+            this.logger.error(
+              `[StartupCache] ❌ Failed to preload tenant ${tenantId}, timeRange ${timeRange}:`,
+              error.message
+            );
           }
         }
-      }, delay);
-    };
+      }
 
-    // Start first attempt after 5 seconds
-    attemptPreload(1, 5000);
+      this.logger.log(
+        `[StartupCache] 🎉 Completed: ${successCount} preloaded, ${errorCount} errors`
+      );
+    } catch (error) {
+      this.logger.error('[StartupCache] ❌ Failed:', error.stack || error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Helper to sleep for a given number of milliseconds
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Check if cache warming is complete
+   */
+  isWarmed(): boolean {
+    return this.isWarmingComplete;
+  }
+
+  /**
+   * Wait for cache warming to complete (with timeout)
+   */
+  async waitForWarmup(timeoutMs: number = 10000): Promise<boolean> {
+    if (this.isWarmingComplete) {
+      return true;
+    }
+
+    if (!this.warmingPromise) {
+      return false;
+    }
+
+    try {
+      await Promise.race([
+        this.warmingPromise,
+        this.sleep(timeoutMs),
+      ]);
+      return this.isWarmingComplete;
+    } catch (error) {
+      this.logger.error('Error waiting for warmup:', error);
+      return false;
+    }
   }
 
   /**
