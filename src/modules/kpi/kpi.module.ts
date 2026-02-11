@@ -1,4 +1,4 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module, OnModuleInit, Logger } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -75,26 +75,25 @@ import { KpiSeedController } from './controllers/kpi-seed.controller';
   ],
 })
 export class KpiModule implements OnModuleInit {
+  private readonly logger = new Logger(KpiModule.name);
+
   constructor(private moduleRef: ModuleRef) {}
 
   async onModuleInit() {
-    console.log('[KpiModule] onModuleInit - Wiring up organizational pulse services...');
+    this.logger.log('[KpiModule] onModuleInit - Wiring up organizational pulse services...');
 
     // Wire up the pulse service to the cache service after module initialization
     // This avoids circular dependency issues
     const cacheService = this.moduleRef.get(OrganizationalPulseCacheService, { strict: false });
     const pulseService = this.moduleRef.get(OrganizationalPulseService, { strict: false });
 
-    console.log('[KpiModule] Services found:', {
-      cacheService: !!cacheService,
-      pulseService: !!pulseService,
-    });
+    this.logger.log(`[KpiModule] Services found: cacheService=${!!cacheService}, pulseService=${!!pulseService}`);
 
     if (cacheService && pulseService) {
       cacheService.setPulseService(pulseService);
-      console.log('[KpiModule] ✅ Pulse service successfully set on cache service');
+      this.logger.log('[KpiModule] ✅ Pulse service successfully set on cache service');
     } else {
-      console.error('[KpiModule] ❌ Failed to wire services - one or both services not found');
+      this.logger.error('[KpiModule] ❌ Failed to wire services - one or both services not found');
     }
   }
 }

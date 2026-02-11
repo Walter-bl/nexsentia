@@ -6,6 +6,7 @@ import {
   Param,
   UseGuards,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { CurrentTenant } from '../../../common/decorators/current-tenant.decorator';
@@ -30,6 +31,8 @@ import { WeakSignal } from '../../weak-signals/entities/weak-signal.entity';
 @Controller('kpi/dashboard')
 @UseGuards(JwtAuthGuard)
 export class DashboardController {
+  private readonly logger = new Logger(DashboardController.name);
+
   constructor(
     @InjectRepository(MetricValue)
     private readonly metricValueRepository: Repository<MetricValue>,
@@ -63,7 +66,7 @@ export class DashboardController {
     @Query('periodEnd') periodEnd?: string,
     @Query('timeRange') timeRange?: '7d' | '14d' | '1m' | '3m' | '6m' | '1y',
   ) {
-    console.log('[OrganizationalPulse] Starting for tenant:', tenantId);
+    this.logger.log(`[OrganizationalPulse] Starting for tenant ${tenantId}, timeRange=${timeRange}`);
 
     // Use default timeRange if not provided and no custom dates
     const effectiveTimeRange = timeRange || (!periodStart && !periodEnd ? '3m' : null);
@@ -72,25 +75,30 @@ export class DashboardController {
     if (effectiveTimeRange && !periodStart && !periodEnd) {
       const cached = await this.pulseCache.get(tenantId, effectiveTimeRange);
       if (cached) {
-        console.log(`[OrganizationalPulse] ✅ Cache HIT - Returning cached data for tenant ${tenantId}, timeRange ${effectiveTimeRange}`);
+        this.logger.log(`[OrganizationalPulse] ✅ Cache HIT - Returning cached data for tenant ${tenantId}, timeRange ${effectiveTimeRange}`);
         return cached;
       }
     }
 
-    console.log('[OrganizationalPulse] ⚠️  Cache MISS - Calculating data...');
+    this.logger.warn(`[OrganizationalPulse] ⚠️  Cache MISS - Calculating data for tenant ${tenantId}, timeRange ${effectiveTimeRange}...`);
 
     // Use the dedicated service to calculate organizational pulse
+    const startTime = Date.now();
     const result = await this.pulseService.calculateOrganizationalPulse(
       tenantId,
       effectiveTimeRange || undefined,
       periodStart,
       periodEnd,
     );
+    const duration = Date.now() - startTime;
+
+    this.logger.log(`[OrganizationalPulse] Calculated in ${duration}ms`);
 
     // Cache the result (only for standard time ranges, not custom dates)
     if (effectiveTimeRange && !periodStart && !periodEnd) {
       await this.pulseCache.set(tenantId, effectiveTimeRange, result);
       this.pulseCache.registerTenant(tenantId);
+      this.logger.log(`[OrganizationalPulse] ✅ Cached result for tenant ${tenantId}, timeRange ${effectiveTimeRange}`);
     }
 
     return result;
