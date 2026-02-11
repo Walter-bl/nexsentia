@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CacheModule } from '@nestjs/cache-manager';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
@@ -35,6 +36,10 @@ import { OutlookConnection } from '../outlook/entities/outlook-connection.entity
         },
       }),
       inject: [ConfigService],
+    }),
+    CacheModule.register({
+      ttl: 60000, // 1 minute cache for auth/me
+      max: 1000,  // Support many concurrent users
     }),
     TypeOrmModule.forFeature([
       JiraConnection,

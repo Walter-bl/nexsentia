@@ -16,6 +16,7 @@ import { MetricAggregationService } from '../services/metric-aggregation.service
 import { BusinessImpactService } from '../services/business-impact.service';
 import { KpiValidationService } from '../services/kpi-validation.service';
 import { TeamImpactService } from '../services/team-impact.service';
+import { OrganizationalPulseCacheService } from '../services/organizational-pulse-cache.service';
 import { MetricValue } from '../entities/metric-value.entity';
 import { MetricDefinition } from '../entities/metric-definition.entity';
 import { KpiSnapshot } from '../entities/kpi-snapshot.entity';
@@ -50,6 +51,7 @@ export class DashboardController {
     private readonly impactService: BusinessImpactService,
     private readonly validationService: KpiValidationService,
     private readonly teamImpactService: TeamImpactService,
+    private readonly pulseCache: OrganizationalPulseCacheService,
   ) {}
 
   @Get('organizational-pulse')
@@ -60,6 +62,20 @@ export class DashboardController {
     @Query('timeRange') timeRange?: '7d' | '14d' | '1m' | '3m' | '6m' | '1y',
   ) {
     console.log('[OrganizationalPulse] Starting for tenant:', tenantId);
+
+    // Use default timeRange if not provided and no custom dates
+    const effectiveTimeRange = timeRange || (!periodStart && !periodEnd ? '3m' : null);
+
+    // Check cache first (only for standard time ranges, not custom dates)
+    if (effectiveTimeRange && !periodStart && !periodEnd) {
+      const cached = await this.pulseCache.get(tenantId, effectiveTimeRange);
+      if (cached) {
+        console.log(`[OrganizationalPulse] Returning cached data for tenant ${tenantId}, timeRange ${effectiveTimeRange}`);
+        return cached;
+      }
+    }
+
+    console.log('[OrganizationalPulse] Cache miss, calculating data...');
 
     // Calculate date range based on timeRange parameter or custom dates
     const { start, end } = this.calculateDateRange(periodStart, periodEnd, timeRange);
@@ -159,7 +175,7 @@ export class DashboardController {
     const signalDistribution = await this.getSignalDistributionByTheme(tenantId, start, end);
     console.log('[OrganizationalPulse] Signal distribution:', signalDistribution.length);
 
-    return {
+    const result = {
       overallHealth: {
         score: Math.round(summary.overallHealth),
         status: this.getHealthStatus(summary.overallHealth),
@@ -187,6 +203,14 @@ export class DashboardController {
       metrics: metricData,
       period: { start, end },
     };
+
+    // Cache the result (only for standard time ranges, not custom dates)
+    if (effectiveTimeRange && !periodStart && !periodEnd) {
+      await this.pulseCache.set(tenantId, effectiveTimeRange, result);
+      this.pulseCache.registerTenant(tenantId);
+    }
+
+    return result;
   }
 
   @Get('signals/:signalId')

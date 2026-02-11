@@ -1,8 +1,10 @@
-import { Injectable, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ConflictException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { UsersService } from '../users/users.service';
 import { TenantsService } from '../tenants/tenants.service';
 import { RolesService } from '../roles/roles.service';
@@ -45,6 +47,7 @@ export class AuthService {
     private readonly gmailConnectionRepository: Repository<GmailConnection>,
     @InjectRepository(OutlookConnection)
     private readonly outlookConnectionRepository: Repository<OutlookConnection>,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
@@ -288,6 +291,14 @@ export class AuthService {
     gmailConnected: boolean;
     outlookConnected: boolean;
   }> {
+    // Check cache first
+    const cacheKey = `integrations:${tenantId}`;
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) {
+      return cached as any;
+    }
+
+    // Cache miss - query database
     const [jiraConnection, serviceNowConnection, slackConnection, teamsConnection, gmailConnection, outlookConnection] = await Promise.all([
       this.jiraConnectionRepository.findOne({
         where: { tenantId, isActive: true },
@@ -309,7 +320,7 @@ export class AuthService {
       }),
     ]);
 
-    return {
+    const result = {
       jiraConnected: !!jiraConnection,
       serviceNowConnected: !!serviceNowConnection,
       slackConnected: !!slackConnection,
@@ -317,5 +328,10 @@ export class AuthService {
       gmailConnected: !!gmailConnection,
       outlookConnected: !!outlookConnection,
     };
+
+    // Store in cache (1 minute TTL)
+    await this.cacheManager.set(cacheKey, result, 60000);
+
+    return result;
   }
 }

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { CacheModule } from '@nestjs/cache-manager';
 
 // Entities
 import { MetricDefinition } from './entities/metric-definition.entity';
@@ -21,6 +22,7 @@ import { MetricAggregationService } from './services/metric-aggregation.service'
 import { BusinessImpactService } from './services/business-impact.service';
 import { KpiValidationService } from './services/kpi-validation.service';
 import { TeamImpactService } from './services/team-impact.service';
+import { OrganizationalPulseCacheService } from './services/organizational-pulse-cache.service';
 
 // Controllers
 import { MetricsController } from './controllers/metrics.controller';
@@ -42,6 +44,10 @@ import { KpiSeedController } from './controllers/kpi-seed.controller';
       WeakSignal,
     ]),
     ConfigModule,
+    CacheModule.register({
+      ttl: 300000, // 5 minutes in milliseconds
+      max: 100, // maximum number of items in cache
+    }),
   ],
   controllers: [
     MetricsController,
@@ -55,6 +61,7 @@ import { KpiSeedController } from './controllers/kpi-seed.controller';
     BusinessImpactService,
     KpiValidationService,
     TeamImpactService,
+    OrganizationalPulseCacheService,
   ],
   exports: [
     MetricDefinitionService,
