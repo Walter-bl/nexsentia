@@ -151,8 +151,9 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
     const maxAttempts = 3;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      // Wait before attempting (gives time for pulse service to be wired)
-      const delay = attempt === 1 ? 5000 : 10000 * attempt;
+      // Wait a short time for pulse service to be wired (circular dependency resolution)
+      // First attempt: 1 second, subsequent attempts: 3 seconds
+      const delay = attempt === 1 ? 1000 : 3000;
       await this.sleep(delay);
 
       try {
