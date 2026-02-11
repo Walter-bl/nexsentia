@@ -134,6 +134,55 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
   }
 
   /**
+   * Preload all time ranges for a specific tenant in the background
+   * Called when a user makes a request to ensure all time ranges are cached
+   */
+  async preloadAllTimeRangesForTenant(tenantId: number): Promise<void> {
+    if (!this.pulseService) {
+      this.logger.warn('[PreloadTenant] Pulse service not available, skipping');
+      return;
+    }
+
+    const allTimeRanges: Array<'7d' | '14d' | '1m' | '3m' | '6m' | '1y'> = ['7d', '14d', '1m', '3m', '6m', '1y'];
+
+    this.logger.log(`[PreloadTenant] 🔄 Starting background preload for tenant ${tenantId}...`);
+
+    let successCount = 0;
+    let skippedCount = 0;
+
+    for (const timeRange of allTimeRanges) {
+      try {
+        // Check if already cached
+        const cached = await this.get(tenantId, timeRange);
+        if (cached) {
+          skippedCount++;
+          continue;
+        }
+
+        // Preload this time range
+        this.logger.log(`[PreloadTenant] 🔥 Preloading tenant ${tenantId}, timeRange ${timeRange}...`);
+        const startTime = Date.now();
+
+        const data = await this.pulseService.calculateOrganizationalPulse(tenantId, timeRange);
+        await this.set(tenantId, timeRange, data);
+
+        const duration = Date.now() - startTime;
+        successCount++;
+        this.logger.log(`[PreloadTenant] ✅ Preloaded tenant ${tenantId}, timeRange ${timeRange} in ${duration}ms`);
+      } catch (error) {
+        this.logger.error(
+          `[PreloadTenant] ❌ Failed to preload tenant ${tenantId}, timeRange ${timeRange}:`,
+          error.message
+        );
+      }
+    }
+
+    this.logger.log(
+      `[PreloadTenant] 🎉 Completed for tenant ${tenantId}: ${successCount} preloaded, ${skippedCount} already cached`
+    );
+  }
+
+  /**
    * Preload organizational pulse data on application startup
    * This warms the cache so first user requests are fast
    */

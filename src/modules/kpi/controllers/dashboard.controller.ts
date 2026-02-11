@@ -110,6 +110,11 @@ export class DashboardController {
       await this.pulseCache.set(tenantId, effectiveTimeRange, result);
       this.pulseCache.registerTenant(tenantId);
       this.logger.log(`[OrganizationalPulse] ✅ Cached result for tenant ${tenantId}, timeRange ${effectiveTimeRange}`);
+
+      // Trigger background preloading for all other time ranges
+      this.pulseCache.preloadAllTimeRangesForTenant(tenantId).catch(err => {
+        this.logger.error(`[OrganizationalPulse] Background preload failed: ${err.message}`);
+      });
     }
 
     return result;
