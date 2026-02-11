@@ -43,25 +43,50 @@ export class ChatbotController {
           chatDto,
           // onToken callback
           (token: string) => {
-            subscriber.next({
-              data: { type: 'token', content: token },
-            } as MessageEvent);
+            try {
+              subscriber.next({
+                data: { type: 'token', content: token },
+              } as MessageEvent);
+            } catch (err) {
+              console.error('[ChatStream] Error sending token:', err);
+            }
           },
           // onMetadata callback
           (metadata: { sessionId: string; sources: any }) => {
-            subscriber.next({
-              data: { type: 'metadata', ...metadata },
-            } as MessageEvent);
+            try {
+              subscriber.next({
+                data: { type: 'metadata', ...metadata },
+              } as MessageEvent);
+            } catch (err) {
+              console.error('[ChatStream] Error sending metadata:', err);
+            }
           },
         )
         .then(() => {
-          subscriber.next({
-            data: { type: 'done' },
-          } as MessageEvent);
-          subscriber.complete();
+          try {
+            subscriber.next({
+              data: { type: 'done' },
+            } as MessageEvent);
+            subscriber.complete();
+          } catch (err) {
+            console.error('[ChatStream] Error completing stream:', err);
+          }
         })
         .catch((error) => {
-          subscriber.error(error);
+          console.error('[ChatStream] Service error:', error);
+          // Send error as SSE event instead of throwing
+          try {
+            subscriber.next({
+              data: {
+                type: 'error',
+                message: error.message || 'Failed to generate response',
+              },
+            } as MessageEvent);
+            subscriber.complete();
+          } catch (err) {
+            console.error('[ChatStream] Error sending error event:', err);
+            subscriber.error(error);
+          }
         });
     });
   }

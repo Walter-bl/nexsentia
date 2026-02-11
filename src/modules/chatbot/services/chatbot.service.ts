@@ -85,6 +85,17 @@ export class ChatbotService {
   ): Promise<void> {
     const sessionId = chatDto.sessionId || uuidv4();
 
+    // Send metadata first with empty sources (will be sent even if errors occur)
+    onMetadata({
+      sessionId,
+      sources: {
+        signals: 0,
+        incidents: 0,
+        issues: 0,
+        metrics: 0,
+      },
+    });
+
     try {
       // 1. Analyze user intent
       this.logger.log(`[Stream] Analyzing intent for message: ${chatDto.message.substring(0, 50)}...`);
@@ -95,7 +106,7 @@ export class ChatbotService {
       const context = await this.contextRetrievalService.retrieveContext(tenantId, intent);
       const formattedContext = this.contextRetrievalService.formatContextForPrompt(context);
 
-      // Send metadata first
+      // Update metadata with actual sources
       onMetadata({
         sessionId,
         sources: {
@@ -133,8 +144,35 @@ export class ChatbotService {
       this.logger.log(`[Stream] Completed streaming for session ${sessionId}`);
     } catch (error) {
       this.logger.error('[Stream] Error during streaming:', error);
+
+      // Send a user-friendly error message as a token
+      const errorMessage = this.getErrorMessage(error);
+      onToken(`\n\n## ❌ Error\n\n${errorMessage}\n\nPlease try again or contact support if the issue persists.`);
+
       throw error;
     }
+  }
+
+  private getErrorMessage(error: any): string {
+    const message = error?.message || '';
+
+    if (message.includes('OPENAI_API_KEY')) {
+      return 'The AI service is not configured. Please contact your administrator.';
+    }
+    if (message.includes('authentication') || message.includes('401')) {
+      return 'AI service authentication failed. Please contact support.';
+    }
+    if (message.includes('timeout')) {
+      return 'The AI service request timed out. Please try again.';
+    }
+    if (message.includes('rate limit') || message.includes('429')) {
+      return 'AI service rate limit exceeded. Please try again in a moment.';
+    }
+    if (message.includes('network')) {
+      return 'Network error connecting to AI service. Please check your connection.';
+    }
+
+    return 'An error occurred while processing your request.';
   }
 
   private buildSystemPrompt(context: string): string {
