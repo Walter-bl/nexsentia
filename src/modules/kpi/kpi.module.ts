@@ -1,8 +1,9 @@
 import { Module, OnModuleInit, Logger } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ModuleRef } from '@nestjs/core';
+import * as redisStore from 'cache-manager-redis-store';
 
 // Entities
 import { MetricDefinition } from './entities/metric-definition.entity';
@@ -46,9 +47,36 @@ import { KpiSeedController } from './controllers/kpi-seed.controller';
       WeakSignal,
     ]),
     ConfigModule,
-    CacheModule.register({
-      ttl: 300000, // 5 minutes in milliseconds
-      max: 100, // maximum number of items in cache
+    CacheModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService): any => {
+        const redisHost = configService.get<string>('REDIS_HOST');
+        const redisPort = configService.get<number>('REDIS_PORT', 6379);
+        const redisPassword = configService.get<string>('REDIS_PASSWORD');
+
+        // Use Redis if configured, otherwise fall back to in-memory
+        if (redisHost) {
+          const logger = new Logger('KpiCacheModule');
+          logger.log(`🔴 Using Redis cache at ${redisHost}:${redisPort}`);
+          return {
+            store: redisStore,
+            host: redisHost,
+            port: redisPort,
+            password: redisPassword || undefined,
+            ttl: 300, // 5 minutes in seconds (Redis uses seconds)
+            max: 100,
+          };
+        }
+
+        // Fallback to in-memory cache
+        const logger = new Logger('KpiCacheModule');
+        logger.log('💾 Using in-memory cache (Redis not configured)');
+        return {
+          ttl: 300000, // 5 minutes in milliseconds
+          max: 100,
+        };
+      },
     }),
   ],
   controllers: [
