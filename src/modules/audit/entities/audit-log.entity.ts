@@ -11,10 +11,7 @@ export class AuditLog extends TenantBaseEntity {
   @Column({ type: 'int', nullable: true })
   userId?: number;
 
-  @Column({
-    type: 'enum',
-    enum: AuditAction,
-  })
+  @Column({ type: 'varchar', length: 50 })
   action: AuditAction;
 
   @Column()

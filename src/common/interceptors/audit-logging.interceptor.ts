@@ -8,6 +8,7 @@ import { Observable, throwError } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { AuditService } from '../../modules/audit/audit.service';
 import { Reflector } from '@nestjs/core';
+import { AuditAction } from '../enums';
 
 /**
  * Interceptor to automatically log all API requests to the audit log
@@ -131,14 +132,15 @@ export class AuditLoggingInterceptor implements NestInterceptor {
     path: string,
     body: any,
     params: any,
-  ): { action: string; resource: string; resourceId?: number } {
+  ): { action: AuditAction; resource: string; resourceId?: number } {
     // Remove query string
     const cleanPath = path.split('?')[0];
 
-    // Extract resource from path (e.g., /api/users/123 -> users)
+    // Extract resource from path (e.g., /api/v1/users/123 -> users)
     const pathSegments = cleanPath.split('/').filter((s) => s);
 
-    // Find the first non-numeric segment after 'api' as the resource
+    // Find the first meaningful segment as the resource
+    // Skip: 'api', version prefixes (v1, v2, etc.), and numeric IDs
     let resource = 'unknown';
     let resourceId: number | undefined;
 
@@ -148,14 +150,17 @@ export class AuditLoggingInterceptor implements NestInterceptor {
       // Skip 'api' prefix
       if (segment === 'api') continue;
 
+      // Skip version prefixes (v1, v2, etc.)
+      if (/^v\d+$/.test(segment)) continue;
+
       // Check if this is a number (potential ID)
-      if (!isNaN(Number(segment))) {
+      if (!isNaN(Number(segment)) && segment !== '') {
         resourceId = Number(segment);
         continue;
       }
 
-      // First non-numeric segment is the resource
-      if (!resource || resource === 'unknown') {
+      // First non-numeric, non-prefix segment is the resource
+      if (resource === 'unknown') {
         resource = segment;
       }
     }
@@ -165,24 +170,24 @@ export class AuditLoggingInterceptor implements NestInterceptor {
       resourceId = Number(params.id);
     }
 
-    // Determine action based on HTTP method
-    let action = 'unknown';
+    // Determine action based on HTTP method - use proper AuditAction enum values
+    let action: AuditAction;
     switch (method) {
       case 'POST':
-        action = `${resource}.create`;
+        action = AuditAction.CREATE;
         break;
       case 'PUT':
       case 'PATCH':
-        action = `${resource}.update`;
+        action = AuditAction.UPDATE;
         break;
       case 'DELETE':
-        action = `${resource}.delete`;
+        action = AuditAction.DELETE;
         break;
       case 'GET':
-        action = resourceId ? `${resource}.read` : `${resource}.list`;
+        action = AuditAction.READ;
         break;
       default:
-        action = `${resource}.${method.toLowerCase()}`;
+        action = AuditAction.CREATE; // Default to CREATE for unknown methods
     }
 
     return { action, resource, resourceId };
