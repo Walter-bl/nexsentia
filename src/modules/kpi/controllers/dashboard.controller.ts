@@ -69,7 +69,7 @@ export class DashboardController {
     this.logger.log(`[OrganizationalPulse] Starting for tenant ${tenantId}, timeRange=${timeRange}`);
 
     // Use default timeRange if not provided and no custom dates
-    const effectiveTimeRange = timeRange || (!periodStart && !periodEnd ? '3m' : null);
+    const effectiveTimeRange = timeRange || (!periodStart && !periodEnd ? '7d' : null);
 
     // Check cache first (only for standard time ranges, not custom dates)
     if (effectiveTimeRange && !periodStart && !periodEnd) {
