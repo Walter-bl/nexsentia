@@ -116,7 +116,7 @@ export class OrganizationalPulseService {
     const teamSignals = this.getTeamSignals(metricData);
 
     // Get recent signals (timeline events) grouped by source
-    const recentSignals = await this.getRecentSignals(tenantId, end);
+    const recentSignals = await this.getRecentSignals(tenantId, start, end);
 
     // Get signal distribution by theme
     const signalDistribution = await this.getSignalDistributionByTheme(tenantId, start, end);
@@ -596,20 +596,21 @@ export class OrganizationalPulseService {
     };
   }
 
-  private async getRecentSignals(tenantId: number, endDate: Date): Promise<any> {
+  private async getRecentSignals(tenantId: number, startDate: Date, endDate: Date): Promise<any> {
+    this.logger.debug(`Getting recent signals for tenant ${tenantId} from ${startDate.toISOString()} to ${endDate.toISOString()}`);
     const [engineeringSignals, operationsSignals, communicationSignals] = await Promise.all([
       this.weakSignalRepository.find({
-        where: { tenantId, category: 'Engineering' },
+        where: { tenantId, category: 'Engineering', detectedAt: Between(startDate, endDate) },
         order: { detectedAt: 'DESC' },
         take: 15,
       }),
       this.weakSignalRepository.find({
-        where: { tenantId, category: 'Operations' },
+        where: { tenantId, category: 'Operations', detectedAt: Between(startDate, endDate) },
         order: { detectedAt: 'DESC' },
         take: 15,
       }),
       this.weakSignalRepository.find({
-        where: { tenantId, category: 'Communication' },
+        where: { tenantId, category: 'Communication', detectedAt: Between(startDate, endDate) },
         order: { detectedAt: 'DESC' },
         take: 15,
       }),
