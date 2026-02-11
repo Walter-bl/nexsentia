@@ -9,9 +9,15 @@ import helmet from 'helmet';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    bodyParser: true,
   });
 
   const configService = app.get(ConfigService);
+
+  // Set server timeout to 5 minutes for slow operations
+  const server = app.getHttpServer();
+  server.setTimeout(300000); // 5 minutes
+  server.keepAliveTimeout = 305000; // Slightly higher than setTimeout
 
   // Security
   app.use(helmet());

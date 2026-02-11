@@ -136,21 +136,35 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     this.logger.log('🔥 Scheduling organizational pulse cache warming...');
 
-    // Don't block application startup - run preload asynchronously
-    // Give more time for dependencies to initialize (20 seconds)
-    setTimeout(async () => {
-      try {
-        if (!this.pulseService) {
-          this.logger.warn('⚠️  Pulse service not initialized yet, skipping preload');
-          return;
+    // Try multiple times with increasing delays to ensure preload happens
+    const attemptPreload = async (attempt: number, delay: number) => {
+      setTimeout(async () => {
+        try {
+          if (!this.pulseService) {
+            this.logger.warn(`⚠️  Pulse service not initialized yet (attempt ${attempt}/3), skipping preload`);
+
+            // Try again if we still have attempts left
+            if (attempt < 3) {
+              attemptPreload(attempt + 1, delay * 2);
+            }
+            return;
+          }
+          this.logger.log(`🔥 Starting cache warming (attempt ${attempt})...`);
+          await this.preloadOrganizationalPulse();
+          this.logger.log('✅ Startup cache warming completed successfully');
+        } catch (error) {
+          this.logger.error(`❌ Startup cache warming failed (attempt ${attempt}):`, error.stack || error.message);
+
+          // Retry on error for up to 3 attempts
+          if (attempt < 3) {
+            attemptPreload(attempt + 1, delay * 2);
+          }
         }
-        this.logger.log('🔥 Starting cache warming...');
-        await this.preloadOrganizationalPulse();
-        this.logger.log('✅ Startup cache warming completed');
-      } catch (error) {
-        this.logger.error('❌ Startup cache warming failed:', error.stack || error.message);
-      }
-    }, 20000); // Wait 20 seconds after startup to let the app fully initialize
+      }, delay);
+    };
+
+    // Start first attempt after 5 seconds
+    attemptPreload(1, 5000);
   }
 
   /**
