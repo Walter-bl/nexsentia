@@ -1,5 +1,5 @@
 import { IsString, IsNotEmpty, IsOptional, IsArray, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class MessageHistoryDto {
@@ -10,6 +10,11 @@ export class MessageHistoryDto {
   @ApiProperty()
   @IsString()
   content: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  timestamp?: string;
 }
 
 export class ChatMessageDto {
@@ -20,6 +25,16 @@ export class ChatMessageDto {
 
   @ApiPropertyOptional({ description: 'Conversation history for context', type: [MessageHistoryDto] })
   @IsOptional()
+  @Transform(({ value }) => {
+    // Handle both array and object formats (e.g., {"0": {...}, "1": {...}})
+    if (!value) return undefined;
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'object') {
+      // Convert object with numeric keys to array
+      return Object.values(value);
+    }
+    return value;
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => MessageHistoryDto)
