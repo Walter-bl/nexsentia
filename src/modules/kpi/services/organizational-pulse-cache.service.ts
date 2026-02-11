@@ -164,12 +164,18 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
         this.logger.log(`🔥 Starting cache warming (attempt ${attempt}/${maxAttempts})...`);
         const startTime = Date.now();
 
-        // On startup, only preload the most common time range (3m) for speed
+        // First, preload critical time ranges (7d, 3m) - this makes first requests fast
         await this.preloadStartupCache();
 
         const duration = Date.now() - startTime;
         this.isWarmingComplete = true;
-        this.logger.log(`✅ Startup cache warming completed successfully in ${duration}ms`);
+        this.logger.log(`✅ Critical cache warming completed in ${duration}ms`);
+
+        // Now continue to preload remaining time ranges in the background
+        this.preloadRemainingTimeRanges().catch(err => {
+          this.logger.error('❌ Background preload of remaining time ranges failed:', err.message);
+        });
+
         return; // Success, exit retry loop
 
       } catch (error) {
@@ -250,6 +256,72 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
     } catch (error) {
       this.logger.error('[StartupCache] ❌ Failed:', error.stack || error.message);
       throw error;
+    }
+  }
+
+  /**
+   * Preload remaining time ranges after critical ones are done
+   * This runs in the background after startup cache is complete
+   */
+  private async preloadRemainingTimeRanges(): Promise<void> {
+    this.logger.log('[BackgroundCache] 🔄 Starting to preload remaining time ranges...');
+
+    try {
+      // Get distinct tenants from metric definitions
+      const tenants = await this.metricDefinitionRepository
+        .createQueryBuilder('md')
+        .select('DISTINCT md.tenantId', 'tenantId')
+        .where('md.isActive = :isActive', { isActive: true })
+        .getRawMany();
+
+      const tenantIds = tenants.map(t => t.tenantId);
+
+      if (tenantIds.length === 0) {
+        this.logger.warn('[BackgroundCache] ⚠️  No active tenants found');
+        return;
+      }
+
+      // Preload remaining time ranges (14d, 1m, 6m, 1y) - 7d and 3m already done
+      const remainingTimeRanges: Array<'14d' | '1m' | '6m' | '1y'> = ['14d', '1m', '6m', '1y'];
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const tenantId of tenantIds) {
+        for (const timeRange of remainingTimeRanges) {
+          try {
+            // Check if already cached
+            const cached = await this.get(tenantId, timeRange);
+            if (cached) {
+              this.logger.debug(`[BackgroundCache] ⏭️  Skipping tenant ${tenantId}, timeRange ${timeRange} (already cached)`);
+              continue;
+            }
+
+            // Preload this time range
+            this.logger.log(`[BackgroundCache] 🔥 Preloading tenant ${tenantId}, timeRange ${timeRange}...`);
+            const startTime = Date.now();
+
+            const data = await this.pulseService.calculateOrganizationalPulse(tenantId, timeRange);
+            await this.set(tenantId, timeRange, data);
+
+            const duration = Date.now() - startTime;
+            successCount++;
+            this.logger.log(`[BackgroundCache] ✅ Preloaded tenant ${tenantId}, timeRange ${timeRange} in ${duration}ms`);
+          } catch (error) {
+            errorCount++;
+            this.logger.error(
+              `[BackgroundCache] ❌ Failed to preload tenant ${tenantId}, timeRange ${timeRange}:`,
+              error.message
+            );
+          }
+        }
+      }
+
+      this.logger.log(
+        `[BackgroundCache] 🎉 Completed: ${successCount} preloaded, ${errorCount} errors`
+      );
+    } catch (error) {
+      this.logger.error('[BackgroundCache] ❌ Failed:', error.stack || error.message);
     }
   }
 
