@@ -38,8 +38,9 @@ export class JiraIngestionService {
   /**
    * Scheduled job to sync all active connections
    * Runs based on JIRA_SYNC_CRON_SCHEDULE environment variable (default: every 10 minutes)
+   * DISABLED: Cron disabled to reduce server load
    */
-  @Cron(process.env.JIRA_SYNC_CRON_SCHEDULE || '*/10 * * * *')
+  // @Cron(process.env.JIRA_SYNC_CRON_SCHEDULE || '*/10 * * * *')
   async handleScheduledSync() {
     this.logger.log('Starting scheduled sync for all active connections');
 

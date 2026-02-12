@@ -36,8 +36,9 @@ export class SlackIngestionService {
 
   /**
    * Scheduled sync job for all active Slack connections
+   * DISABLED: Cron disabled to reduce server load
    */
-  @Cron(process.env.SLACK_SYNC_CRON_SCHEDULE || '0 */30 * * * *')
+  // @Cron(process.env.SLACK_SYNC_CRON_SCHEDULE || '0 */30 * * * *')
   async handleScheduledSync() {
     this.logger.log('Starting scheduled sync for all active Slack connections');
 

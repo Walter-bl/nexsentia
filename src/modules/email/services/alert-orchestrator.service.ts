@@ -38,10 +38,11 @@ export class AlertOrchestratorService implements OnModuleInit {
 
   /**
    * Process weak signals every 5 minutes
+   * DISABLED: Cron disabled to reduce server load
    */
-  @Cron('0 */5 * * * *', {
-    name: 'process-weak-signals',
-  })
+  // @Cron('0 */5 * * * *', {
+  //   name: 'process-weak-signals',
+  // })
   async processWeakSignals() {
     this.logger.log('Processing weak signals for alerts...');
 
@@ -121,10 +122,11 @@ export class AlertOrchestratorService implements OnModuleInit {
 
   /**
    * Process ServiceNow incidents every 10 minutes
+   * DISABLED: Cron disabled to reduce server load
    */
-  @Cron('0 */10 * * * *', {
-    name: 'process-incidents',
-  })
+  // @Cron('0 */10 * * * *', {
+  //   name: 'process-incidents',
+  // })
   async processIncidents() {
     this.logger.log('Processing ServiceNow incidents for alerts...');
 
@@ -199,10 +201,11 @@ export class AlertOrchestratorService implements OnModuleInit {
 
   /**
    * Cleanup old alert history (runs daily at 3 AM)
+   * DISABLED: Cron disabled to reduce server load
    */
-  @Cron('0 0 3 * * *', {
-    name: 'cleanup-alert-history',
-  })
+  // @Cron('0 0 3 * * *', {
+  //   name: 'cleanup-alert-history',
+  // })
   async cleanupOldAlerts() {
     this.logger.log('Starting alert history cleanup...');
 

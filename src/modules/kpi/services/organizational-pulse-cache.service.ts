@@ -349,8 +349,9 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
    * Runs every 4 hours to keep cache warm
    *
    * IMPORTANT: This now actually calls the calculation service to populate cache
+   * DISABLED: Cron disabled to reduce server load - cache is warmed on startup
    */
-  @Cron(CronExpression.EVERY_4_HOURS)
+  // @Cron(CronExpression.EVERY_4_HOURS)
   async preloadOrganizationalPulse(): Promise<void> {
     if (!this.pulseService) {
       this.logger.error('❌ Pulse service not available, cannot preload');

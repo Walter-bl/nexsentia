@@ -24,8 +24,9 @@ export class AuditCleanupService {
   /**
    * Runs daily at 2:00 AM to clean up old audit logs
    * This helps maintain database performance and comply with data retention policies
+   * DISABLED: Cron disabled to reduce server load
    */
-  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  // @Cron(CronExpression.EVERY_DAY_AT_2AM)
   async handleAuditLogCleanup() {
     this.logger.log('Starting scheduled audit log cleanup...');
 
