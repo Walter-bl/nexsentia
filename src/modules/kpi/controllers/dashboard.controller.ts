@@ -19,6 +19,7 @@ import { KpiValidationService } from '../services/kpi-validation.service';
 import { TeamImpactService } from '../services/team-impact.service';
 import { OrganizationalPulseCacheService } from '../services/organizational-pulse-cache.service';
 import { OrganizationalPulseService } from '../services/organizational-pulse.service';
+import { RedisHealthService } from '../services/redis-health.service';
 import { MetricValue } from '../entities/metric-value.entity';
 import { MetricDefinition } from '../entities/metric-definition.entity';
 import { KpiSnapshot } from '../entities/kpi-snapshot.entity';
@@ -57,6 +58,7 @@ export class DashboardController {
     private readonly teamImpactService: TeamImpactService,
     private readonly pulseCache: OrganizationalPulseCacheService,
     private readonly pulseService: OrganizationalPulseService,
+    private readonly redisHealthService: RedisHealthService,
   ) {}
 
   @Get('organizational-pulse')
@@ -1343,5 +1345,30 @@ export class DashboardController {
     console.log(`[DashboardController] Total time saved: ${dashboard.totalValue.timeSavedHours} hours`);
 
     return dashboard;
+  }
+
+  /**
+   * GET /api/v1/kpi/dashboard/cache-health
+   * Check Redis/cache connection health status
+   */
+  @Get('cache-health')
+  async getCacheHealth() {
+    const health = await this.redisHealthService.checkHealth();
+    return {
+      status: health.connected ? 'healthy' : 'unhealthy',
+      cache: {
+        type: health.type,
+        connected: health.connected,
+        host: health.host || null,
+        port: health.port || null,
+        latencyMs: health.latencyMs,
+        error: health.error || null,
+      },
+      cacheWarming: {
+        isComplete: this.pulseCache.isWarmed(),
+        activeTenants: this.pulseCache.getActiveTenants().length,
+      },
+      lastChecked: health.lastChecked,
+    };
   }
 }

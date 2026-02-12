@@ -26,6 +26,7 @@ import { KpiValidationService } from './services/kpi-validation.service';
 import { TeamImpactService } from './services/team-impact.service';
 import { OrganizationalPulseCacheService } from './services/organizational-pulse-cache.service';
 import { OrganizationalPulseService } from './services/organizational-pulse.service';
+import { RedisHealthService } from './services/redis-health.service';
 
 // Controllers
 import { MetricsController } from './controllers/metrics.controller';
@@ -93,6 +94,7 @@ import { KpiSeedController } from './controllers/kpi-seed.controller';
     TeamImpactService,
     OrganizationalPulseService,
     OrganizationalPulseCacheService,
+    RedisHealthService,
   ],
   exports: [
     MetricDefinitionService,
