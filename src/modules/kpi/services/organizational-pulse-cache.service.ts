@@ -198,19 +198,27 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
     // Start warming in background (non-blocking) but track the promise
     this.warmingPromise = this.attemptWarmup();
 
-    // Set up dynamic interval for cache refresh
-    // Default: 25 minutes (1500000ms), configurable via ORG_PULSE_CACHE_INTERVAL_MS env var
-    // This should be less than the cache TTL (30 min) to ensure cache stays warm
-    const intervalMs = this.configService.get<number>('ORG_PULSE_CACHE_INTERVAL_MS', 1500000);
-    this.logger.log(`📅 Setting up organizational pulse cache refresh interval: ${intervalMs}ms (${intervalMs / 60000} minutes)`);
+    // Check if interval-based cache refresh is enabled (default: disabled)
+    // The startup warming + on-demand caching is usually sufficient
+    const enableInterval = this.configService.get<string>('ORG_PULSE_CACHE_INTERVAL_ENABLED', 'false') === 'true';
 
-    const interval = setInterval(() => {
-      this.preloadOrganizationalPulse().catch(err => {
-        this.logger.error(`Cache refresh interval error: ${err.message}`);
-      });
-    }, intervalMs);
+    if (enableInterval) {
+      // Set up dynamic interval for cache refresh
+      // Default: 25 minutes (1500000ms), configurable via ORG_PULSE_CACHE_INTERVAL_MS env var
+      // This should be less than the cache TTL (30 min) to ensure cache stays warm
+      const intervalMs = this.configService.get<number>('ORG_PULSE_CACHE_INTERVAL_MS', 1500000);
+      this.logger.log(`📅 Setting up organizational pulse cache refresh interval: ${intervalMs}ms (${intervalMs / 60000} minutes)`);
 
-    this.schedulerRegistry.addInterval('organizational-pulse-cache-refresh', interval);
+      const interval = setInterval(() => {
+        this.preloadOrganizationalPulse().catch(err => {
+          this.logger.error(`Cache refresh interval error: ${err.message}`);
+        });
+      }, intervalMs);
+
+      this.schedulerRegistry.addInterval('organizational-pulse-cache-refresh', interval);
+    } else {
+      this.logger.log('📅 Interval-based cache refresh is DISABLED (set ORG_PULSE_CACHE_INTERVAL_ENABLED=true to enable)');
+    }
   }
 
   /**
