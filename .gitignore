@@ -34,8 +34,6 @@ lerna-debug.log*
 !.vscode/extensions.json
 
 # Environment
-.env
-.env.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -45,3 +43,4 @@ lerna-debug.log*
 *.swo
 *~
 .claude
+config.bat

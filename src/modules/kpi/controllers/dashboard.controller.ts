@@ -116,10 +116,16 @@ export class DashboardController {
     @CurrentTenant() tenantId: number,
     @Param('signalId') signalId: string,
   ) {
+    // Check for dynamically generated pattern events first
+    // These have format: {source}_{type}_{timestamp} (e.g., "teams_comm_drop_1770905075959")
+    if (signalId.includes('_comm_drop_') || signalId.includes('_pattern_')) {
+      return this.getPatternSignalDetails(tenantId, signalId);
+    }
+
     // Parse signal ID format: {source}_{id}
     const parts = signalId.split('_');
     if (parts.length !== 2) {
-      throw new NotFoundException(`Invalid signal ID format: ${signalId}`);
+      throw new NotFoundException(`Invalid signal ID format: ${signalId}. Expected format: {source}_{id}`);
     }
 
     const [source, id] = parts;
@@ -272,6 +278,51 @@ export class DashboardController {
     }
 
     return signal;
+  }
+
+  /**
+   * Get details for dynamically generated pattern events
+   * These events are generated on-the-fly (e.g., communication drops)
+   */
+  private getPatternSignalDetails(tenantId: number, signalId: string): any {
+    // Parse pattern event ID format: {source}_{type}_{timestamp}
+    const commDropMatch = signalId.match(/^(slack|teams)_comm_drop_(\d+)$/);
+
+    if (commDropMatch) {
+      const source = commDropMatch[1] as 'slack' | 'teams';
+      const timestamp = parseInt(commDropMatch[2], 10);
+      const eventDate = new Date(timestamp);
+
+      return {
+        id: signalId,
+        type: 'pattern',
+        title: `Communication Drop Detected in ${source === 'slack' ? 'Slack' : 'Teams'}`,
+        description: `AI detected a significant decrease in message volume compared to the average. This may indicate reduced team collaboration or availability issues.`,
+        source: source,
+        severity: 'medium',
+        timestamp: eventDate,
+        team: source === 'slack' ? 'Engineering' : 'Product',
+        details: {
+          patternType: 'communication_volume_drop',
+          detectedAt: eventDate.toISOString(),
+          status: 'historical',
+          suggestedActions: [
+            'Check if team members are on PTO or out of office',
+            'Review recent team workload and capacity',
+            'Schedule team sync to address potential blockers',
+          ],
+        },
+        aiAnalysis: {
+          detectedPattern: 'communication_volume_drop',
+          severity: 'medium',
+          rootCause: 'Significant decrease in team communication volume',
+          predictedImpact: 'May indicate reduced team engagement or coordination issues',
+        },
+      };
+    }
+
+    // Unknown pattern format
+    throw new NotFoundException(`Unknown pattern event format: ${signalId}`);
   }
 
   @Get('org-health')

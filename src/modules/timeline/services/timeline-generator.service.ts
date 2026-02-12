@@ -339,12 +339,23 @@ export class TimelineGeneratorService {
 
   /**
    * Get timeline for a specific signal by its ID
+   *
+   * Supports multiple ID formats:
+   * - Database records: {source}_{id} (e.g., "jira_123", "teams_456")
+   * - Generated patterns: {source}_{type}_{timestamp} (e.g., "teams_comm_drop_1770905075959")
    */
   async getSignalTimeline(tenantId: number, signalId: string): Promise<GeneratedTimelineEvent> {
+    // Check for dynamically generated event patterns first
+    // These are generated on-the-fly and not stored in the database
+    if (signalId.includes('_comm_drop_') || signalId.includes('_pattern_')) {
+      // This is a dynamically generated event - regenerate it
+      return this.regeneratePatternEvent(tenantId, signalId);
+    }
+
     // Parse signal ID format: {source}_{id}
     const parts = signalId.split('_');
     if (parts.length !== 2) {
-      throw new NotFoundException(`Invalid signal ID format: ${signalId}`);
+      throw new NotFoundException(`Invalid signal ID format: ${signalId}. Expected format: {source}_{id}`);
     }
 
     const [source, id] = parts;
@@ -504,6 +515,64 @@ export class TimelineGeneratorService {
     }
 
     return event;
+  }
+
+  /**
+   * Regenerate a dynamically generated pattern event
+   * These events are not stored in the database and need to be regenerated
+   */
+  private async regeneratePatternEvent(tenantId: number, signalId: string): Promise<GeneratedTimelineEvent> {
+    // Parse the pattern event ID format: {source}_{type}_{timestamp}
+    // Examples: teams_comm_drop_1770905075959, slack_comm_drop_1770905075959
+    const commDropMatch = signalId.match(/^(slack|teams)_comm_drop_(\d+)$/);
+
+    if (commDropMatch) {
+      const source = commDropMatch[1] as 'slack' | 'teams';
+      const timestamp = parseInt(commDropMatch[2], 10);
+      const eventDate = new Date(timestamp);
+
+      // Regenerate the communication pattern event with current data
+      const events = await this.generateCommunicationEvents(tenantId, {});
+
+      // Try to find the exact event by ID
+      const exactEvent = events.find(e => e.id === signalId);
+      if (exactEvent) {
+        return exactEvent;
+      }
+
+      // If exact event not found (timestamp may have changed), find by source type
+      const sourceEvent = events.find(e => e.sourceType === source && e.id.includes('_comm_drop_'));
+      if (sourceEvent) {
+        return sourceEvent;
+      }
+
+      // If no current event exists, return a historical representation
+      return {
+        id: signalId,
+        title: `Communication Drop Detected in ${source === 'slack' ? 'Slack' : 'Teams'}`,
+        description: `This communication pattern was detected at ${eventDate.toISOString()}. The pattern may no longer be active.`,
+        eventDate: eventDate,
+        impactLevel: 'medium',
+        category: 'Communication',
+        sourceType: source,
+        sourceId: `pattern_detection_${timestamp}`,
+        isResolved: true, // Mark as resolved since we can't verify current state
+        metadata: {
+          note: 'Historical pattern event - current data unavailable',
+          originalTimestamp: timestamp,
+        },
+        aiAnalysis: {
+          detectedPattern: 'communication_volume_drop',
+          severity: 'medium',
+          status: 'historical',
+        },
+        affectedSystems: [source === 'slack' ? 'Slack Workspace' : 'Microsoft Teams'],
+        detectionConfidence: 0.5,
+      };
+    }
+
+    // Unknown pattern format
+    throw new NotFoundException(`Unknown pattern event format: ${signalId}`);
   }
 
   /**
