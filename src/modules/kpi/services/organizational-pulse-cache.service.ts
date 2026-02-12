@@ -30,6 +30,9 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
   private isWarmingComplete = false;
   private warmingPromise: Promise<void> | null = null;
 
+  // Prevent overlapping preload runs
+  private isPreloadRunning = false;
+
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @InjectRepository(MetricDefinition)
@@ -196,8 +199,9 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
     this.warmingPromise = this.attemptWarmup();
 
     // Set up dynamic interval for cache refresh
-    // Default: 1 minute (60000ms), configurable via ORG_PULSE_CACHE_INTERVAL_MS env var
-    const intervalMs = this.configService.get<number>('ORG_PULSE_CACHE_INTERVAL_MS', 60000);
+    // Default: 25 minutes (1500000ms), configurable via ORG_PULSE_CACHE_INTERVAL_MS env var
+    // This should be less than the cache TTL (30 min) to ensure cache stays warm
+    const intervalMs = this.configService.get<number>('ORG_PULSE_CACHE_INTERVAL_MS', 1500000);
     this.logger.log(`📅 Setting up organizational pulse cache refresh interval: ${intervalMs}ms (${intervalMs / 60000} minutes)`);
 
     const interval = setInterval(() => {
@@ -362,16 +366,23 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
 
   /**
    * Background job to preload organizational pulse data
-   * Interval is configurable via ORG_PULSE_CACHE_INTERVAL_MS env var (default: 1 minute)
+   * Interval is configurable via ORG_PULSE_CACHE_INTERVAL_MS env var (default: 25 minutes)
    *
    * IMPORTANT: This now actually calls the calculation service to populate cache
    */
   async preloadOrganizationalPulse(): Promise<void> {
+    // Prevent overlapping runs - if a preload is already running, skip this one
+    if (this.isPreloadRunning) {
+      this.logger.warn('⏭️  Skipping preload - previous run still in progress');
+      return;
+    }
+
     if (!this.pulseService) {
       this.logger.error('❌ Pulse service not available, cannot preload');
       return;
     }
 
+    this.isPreloadRunning = true;
     this.logger.log('🔄 Starting organizational pulse preload job');
 
     try {
@@ -439,6 +450,8 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
       );
     } catch (error) {
       this.logger.error('❌ Preload job failed:', error.stack || error.message);
+    } finally {
+      this.isPreloadRunning = false;
     }
   }
 
