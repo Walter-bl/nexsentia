@@ -39,6 +39,8 @@ export class OrganizationalPulseService {
   /**
    * Calculate organizational pulse data for a tenant and time range
    * This is the main computation that can be preloaded and cached
+   *
+   * OPTIMIZED: Uses parallel processing for metrics and data fetching
    */
   async calculateOrganizationalPulse(
     tenantId: number,
@@ -46,36 +48,37 @@ export class OrganizationalPulseService {
     periodStart?: string,
     periodEnd?: string,
   ): Promise<any> {
+    const startTime = Date.now();
     this.logger.log(`Calculating organizational pulse for tenant ${tenantId}, timeRange: ${timeRange}`);
 
     // Calculate date range
     const { start, end } = this.calculateDateRange(periodStart, periodEnd, timeRange);
+    const previousPeriodStart = new Date(start.getTime() - (end.getTime() - start.getTime()));
     this.logger.debug(`Date range: ${start.toISOString()} to ${end.toISOString()}`);
 
-    // Get org health metrics and calculate them from raw ingestion data
+    // Get org health metrics
     const metrics = await this.definitionService.getMetrics(tenantId, 'org_health');
     this.logger.debug(`Found ${metrics.length} metrics to calculate`);
-    const metricData = [];
 
-    for (const metric of metrics) {
-      // Calculate metric directly from ingestion data in real-time
-      const result = await this.aggregationService.calculateMetric(metric, {
-        tenantId,
-        periodStart: start,
-        periodEnd: end,
-        granularity: 'daily',
-      });
-
-      if (result && result.value !== undefined) {
-        // Calculate comparison with previous period for trend
-        const previousPeriodStart = new Date(start.getTime() - (end.getTime() - start.getTime()));
-        const previousResult = await this.aggregationService.calculateMetric(metric, {
+    // OPTIMIZATION 1: Calculate all metrics in parallel (both current and previous periods)
+    const metricPromises = metrics.map(async (metric) => {
+      // Run current and previous period calculations in parallel
+      const [result, previousResult] = await Promise.all([
+        this.aggregationService.calculateMetric(metric, {
+          tenantId,
+          periodStart: start,
+          periodEnd: end,
+          granularity: 'daily',
+        }),
+        this.aggregationService.calculateMetric(metric, {
           tenantId,
           periodStart: previousPeriodStart,
           periodEnd: start,
           granularity: 'daily',
-        });
+        }),
+      ]);
 
+      if (result && result.value !== undefined) {
         const previousValue = previousResult?.value || result.value;
         const changePercent = previousValue ? ((result.value - previousValue) / previousValue) * 100 : 0;
 
@@ -86,7 +89,7 @@ export class OrganizationalPulseService {
 
         const status = this.determineStatus(result.value, metric.thresholds);
 
-        metricData.push({
+        return {
           key: metric.metricKey,
           name: metric.name,
           value: result.value,
@@ -95,31 +98,28 @@ export class OrganizationalPulseService {
           changePercent: parseFloat(changePercent.toFixed(2)),
           status,
           breakdown: result.breakdown,
-        });
+        };
       }
-    }
+      return null;
+    });
 
-    // Calculate overall health score
+    // OPTIMIZATION 2: Run metrics calculation and additional data fetching in parallel
+    const [metricResults, impacts, recentSignals, signalDistribution] = await Promise.all([
+      Promise.all(metricPromises),
+      this.impactService.getImpacts(tenantId, start, end),
+      this.getRecentSignals(tenantId, start, end),
+      this.getSignalDistributionByTheme(tenantId, start, end),
+    ]);
+
+    // Filter out null results
+    const metricData = metricResults.filter(m => m !== null);
+
+    // Calculate derived data (these are fast, in-memory operations)
     const summary = this.calculateSummary(metricData);
-
-    // Get business impacts for escalations chart
-    const impacts = await this.impactService.getImpacts(tenantId, start, end);
     const totalHoursLost = this.calculateTotalHoursLost(impacts);
-
-    // Group impacts by month for business escalations chart
     const escalationsByMonth = this.groupImpactsByMonthWithHours(impacts, start, end, timeRange);
-
-    // Calculate strategic alignment metrics
     const strategicAlignment = this.calculateStrategicAlignment(metricData);
-
-    // Get team signals breakdown
     const teamSignals = this.getTeamSignals(metricData);
-
-    // Get recent signals (timeline events) grouped by source
-    const recentSignals = await this.getRecentSignals(tenantId, start, end);
-
-    // Get signal distribution by theme
-    const signalDistribution = await this.getSignalDistributionByTheme(tenantId, start, end);
 
     const result = {
       overallHealth: {
@@ -147,7 +147,8 @@ export class OrganizationalPulseService {
       period: { start, end },
     };
 
-    this.logger.log(`Organizational pulse calculated for tenant ${tenantId}: ${metricData.length} metrics, ${impacts.length} impacts`);
+    const duration = Date.now() - startTime;
+    this.logger.log(`Organizational pulse calculated for tenant ${tenantId} in ${duration}ms: ${metricData.length} metrics, ${impacts.length} impacts`);
 
     return result;
   }
@@ -719,6 +720,10 @@ export class OrganizationalPulseService {
     return signal.signalType === 'pattern_recurring' ? 'servicenow' : 'jira';
   }
 
+  /**
+   * Get signal distribution by theme
+   * OPTIMIZED: Runs all queries in parallel and uses select for lighter payloads
+   */
   private async getSignalDistributionByTheme(
     tenantId: number,
     startDate: Date,
@@ -730,35 +735,37 @@ export class OrganizationalPulseService {
     totalCount: number;
     color: string;
   }>> {
+    // Run ALL queries in parallel - counts and finds together
     const [
-      jiraIssues,
-      serviceNowIncidents,
       slackMessages,
       teamsMessages,
+      incidents,
+      issues,
     ] = await Promise.all([
-      this.jiraIssueRepository.count({
-        where: { tenantId, jiraCreatedAt: Between(startDate, endDate) },
-      }),
-      this.serviceNowIncidentRepository.count({
-        where: { tenantId, openedAt: Between(startDate, endDate) },
-      }),
       this.slackMessageRepository.count({
         where: { tenantId, slackCreatedAt: Between(startDate, endDate) },
       }),
       this.teamsMessageRepository.count({
         where: { tenantId, createdDateTime: Between(startDate, endDate) },
       }),
+      this.serviceNowIncidentRepository.find({
+        where: { tenantId, openedAt: Between(startDate, endDate) },
+        select: ['category'],
+      }),
+      this.jiraIssueRepository.find({
+        where: { tenantId, jiraCreatedAt: Between(startDate, endDate) },
+        select: ['issueType'],
+      }),
     ]);
 
-    const incidents = await this.serviceNowIncidentRepository.find({
-      where: { tenantId, openedAt: Between(startDate, endDate) },
-      select: ['category', 'priority'],
-    });
-
-    const issues = await this.jiraIssueRepository.find({
-      where: { tenantId, jiraCreatedAt: Between(startDate, endDate) },
-      select: ['issueType', 'priority'],
-    });
+    // Pre-calculate filtered counts once (avoid repeated filter operations)
+    const infraIncidents = incidents.filter(i =>
+      i.category === 'Infrastructure' || i.category === 'Network'
+    ).length;
+    const appIncidents = incidents.filter(i => i.category === 'Application').length;
+    const bugIssues = issues.filter(i => i.issueType === 'bug' || i.issueType === 'incident').length;
+    const taskIssues = issues.filter(i => i.issueType === 'task').length;
+    const storyIssues = issues.filter(i => i.issueType === 'task' || i.issueType === 'story').length;
 
     const themes = {
       Communication: {
@@ -767,32 +774,23 @@ export class OrganizationalPulseService {
         color: '#10b981',
       },
       System: {
-        incidentCount: incidents.filter(i =>
-          i.category === 'Infrastructure' || i.category === 'Network'
-        ).length,
-        signalCount: incidents.filter(i =>
-          i.category === 'Infrastructure' || i.category === 'Network'
-        ).length,
+        incidentCount: infraIncidents,
+        signalCount: infraIncidents,
         color: '#06b6d4',
       },
       Product: {
-        incidentCount: issues.filter(i => i.issueType === 'bug' || i.issueType === 'incident').length,
-        signalCount: issues.filter(i => i.issueType === 'bug' || i.issueType === 'incident').length,
+        incidentCount: bugIssues,
+        signalCount: bugIssues,
         color: '#8b5cf6',
       },
       Checkout: {
-        incidentCount: incidents.filter(i =>
-          i.category === 'Application' &&
-          incidents.filter(inc => inc.category === 'Application').indexOf(i) < incidents.filter(inc => inc.category === 'Application').length / 2
-        ).length,
-        signalCount: incidents.filter(i =>
-          i.category === 'Application'
-        ).length,
+        incidentCount: Math.floor(appIncidents / 2),
+        signalCount: appIncidents,
         color: '#22c55e',
       },
       Stock: {
-        incidentCount: issues.filter(i => i.issueType === 'task').length,
-        signalCount: issues.filter(i => i.issueType === 'task' || i.issueType === 'story').length,
+        incidentCount: taskIssues,
+        signalCount: storyIssues,
         color: '#f59e0b',
       },
     };

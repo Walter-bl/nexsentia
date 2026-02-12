@@ -58,25 +58,27 @@ export class MetricAggregationService {
 
   /**
    * Execute standard aggregation logic
+   * OPTIMIZED: Fetches all source data in parallel
    */
   private async executeStandardAggregation(
     metric: MetricDefinition,
     context: MetricCalculationContext,
   ): Promise<MetricResult> {
     const { sourceTypes, sourceFields, filters } = metric.calculation;
-    const data: any[] = [];
 
-    // Fetch data from all source types
-    for (const sourceType of sourceTypes) {
-      const sourceData = await this.fetchSourceData(
+    // OPTIMIZATION: Fetch data from all source types in parallel
+    const sourceDataPromises = sourceTypes.map(sourceType =>
+      this.fetchSourceData(
         sourceType,
         context.tenantId,
         context.periodStart,
         context.periodEnd,
         filters,
-      );
-      data.push(...sourceData);
-    }
+      )
+    );
+
+    const sourceDataArrays = await Promise.all(sourceDataPromises);
+    const data = sourceDataArrays.flat();
 
     // Apply aggregation
     const value = this.applyAggregation(

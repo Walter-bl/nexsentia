@@ -64,7 +64,7 @@ import { KpiSeedController } from './controllers/kpi-seed.controller';
             host: redisHost,
             port: redisPort,
             password: redisPassword || undefined,
-            ttl: 300, // 5 minutes in seconds (Redis uses seconds)
+            ttl: 1800, // 30 minutes in seconds (Redis uses seconds)
             max: 100,
           };
         }
@@ -73,7 +73,7 @@ import { KpiSeedController } from './controllers/kpi-seed.controller';
         const logger = new Logger('KpiCacheModule');
         logger.log('💾 Using in-memory cache (Redis not configured)');
         return {
-          ttl: 300000, // 5 minutes in milliseconds
+          ttl: 1800000, // 30 minutes in milliseconds
           max: 100,
         };
       },

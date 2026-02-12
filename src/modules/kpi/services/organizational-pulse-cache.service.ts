@@ -17,7 +17,7 @@ import { OrganizationalPulseService } from './organizational-pulse.service';
 @Injectable()
 export class OrganizationalPulseCacheService implements OnModuleInit {
   private readonly logger = new Logger(OrganizationalPulseCacheService.name);
-  private readonly CACHE_TTL = 300000; // 5 minutes in milliseconds
+  private readonly CACHE_TTL = 1800000; // 30 minutes in milliseconds (increased from 5 min)
   private readonly CACHE_KEY_PREFIX = 'org_pulse';
 
   // Track tenants for preloading
