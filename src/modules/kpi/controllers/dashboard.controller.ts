@@ -75,27 +75,10 @@ export class DashboardController {
 
     // Check cache first (only for standard time ranges, not custom dates)
     if (effectiveTimeRange && !periodStart && !periodEnd) {
-      // Check cache immediately - don't wait for warming to complete
-      // This prevents blocking when warming is slow
       const cached = await this.pulseCache.get(tenantId, effectiveTimeRange);
       if (cached) {
         this.logger.log(`[OrganizationalPulse] ✅ Cache HIT - Returning cached data for tenant ${tenantId}, timeRange ${effectiveTimeRange}`);
         return cached;
-      }
-
-      // If cache miss and warming is in progress, wait briefly (max 5 seconds)
-      // to see if the data becomes available
-      if (!this.pulseCache.isWarmed()) {
-        this.logger.log(`[OrganizationalPulse] ⏳ Cache warming in progress, waiting up to 5s...`);
-        await this.pulseCache.waitForWarmup(5000);
-
-        // Check cache again after brief wait
-        const cachedAfterWait = await this.pulseCache.get(tenantId, effectiveTimeRange);
-        if (cachedAfterWait) {
-          this.logger.log(`[OrganizationalPulse] ✅ Cache HIT after wait - Returning cached data`);
-          return cachedAfterWait;
-        }
-        this.logger.warn(`[OrganizationalPulse] ⚠️  Cache still not ready after 5s, proceeding with calculation`);
       }
     }
 

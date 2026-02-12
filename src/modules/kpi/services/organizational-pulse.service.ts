@@ -104,12 +104,17 @@ export class OrganizationalPulseService {
     });
 
     // OPTIMIZATION 2: Run metrics calculation and additional data fetching in parallel
+    this.logger.log(`[OrganizationalPulse] Starting parallel data fetching...`);
+    const parallelStartTime = Date.now();
+
     const [metricResults, impacts, recentSignals, signalDistribution] = await Promise.all([
-      Promise.all(metricPromises),
-      this.impactService.getImpacts(tenantId, start, end),
-      this.getRecentSignals(tenantId, start, end),
-      this.getSignalDistributionByTheme(tenantId, start, end),
+      Promise.all(metricPromises).then(r => { this.logger.log(`[OrganizationalPulse] Metrics completed in ${Date.now() - parallelStartTime}ms`); return r; }),
+      this.impactService.getImpacts(tenantId, start, end).then(r => { this.logger.log(`[OrganizationalPulse] Impacts completed in ${Date.now() - parallelStartTime}ms`); return r; }),
+      this.getRecentSignals(tenantId, start, end).then(r => { this.logger.log(`[OrganizationalPulse] RecentSignals completed in ${Date.now() - parallelStartTime}ms`); return r; }),
+      this.getSignalDistributionByTheme(tenantId, start, end).then(r => { this.logger.log(`[OrganizationalPulse] SignalDistribution completed in ${Date.now() - parallelStartTime}ms`); return r; }),
     ]);
+
+    this.logger.log(`[OrganizationalPulse] All parallel fetching completed in ${Date.now() - parallelStartTime}ms`);
 
     // Filter out null results
     const metricData = metricResults.filter(m => m !== null);

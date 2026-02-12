@@ -193,10 +193,20 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
    * This warms the cache so first user requests are fast
    */
   async onModuleInit(): Promise<void> {
-    this.logger.log('🔥 Scheduling organizational pulse cache warming...');
+    this.logger.log('🔥 Initializing organizational pulse cache service...');
 
-    // Start warming in background (non-blocking) but track the promise
-    this.warmingPromise = this.attemptWarmup();
+    // Check if startup warming is enabled (default: disabled to avoid blocking)
+    const enableStartupWarming = this.configService.get<string>('ORG_PULSE_STARTUP_WARMING_ENABLED', 'false') === 'true';
+
+    if (enableStartupWarming) {
+      this.logger.log('🔥 Startup cache warming is ENABLED - starting background warmup...');
+      // Start warming in background (non-blocking) but track the promise
+      this.warmingPromise = this.attemptWarmup();
+    } else {
+      this.logger.log('🔥 Startup cache warming is DISABLED - cache will warm on first request');
+      // Mark as complete so API doesn't wait for warming
+      this.isWarmingComplete = true;
+    }
 
     // Check if interval-based cache refresh is enabled (default: disabled)
     // The startup warming + on-demand caching is usually sufficient
