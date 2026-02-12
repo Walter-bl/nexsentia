@@ -1,9 +1,10 @@
 import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { MetricDefinition } from '../entities/metric-definition.entity';
 import { OrganizationalPulseService } from './organizational-pulse.service';
 
@@ -33,6 +34,8 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @InjectRepository(MetricDefinition)
     private readonly metricDefinitionRepository: Repository<MetricDefinition>,
+    private readonly schedulerRegistry: SchedulerRegistry,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -191,6 +194,19 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
 
     // Start warming in background (non-blocking) but track the promise
     this.warmingPromise = this.attemptWarmup();
+
+    // Set up dynamic interval for cache refresh
+    // Default: 1 minute (60000ms), configurable via ORG_PULSE_CACHE_INTERVAL_MS env var
+    const intervalMs = this.configService.get<number>('ORG_PULSE_CACHE_INTERVAL_MS', 60000);
+    this.logger.log(`📅 Setting up organizational pulse cache refresh interval: ${intervalMs}ms (${intervalMs / 60000} minutes)`);
+
+    const interval = setInterval(() => {
+      this.preloadOrganizationalPulse().catch(err => {
+        this.logger.error(`Cache refresh interval error: ${err.message}`);
+      });
+    }, intervalMs);
+
+    this.schedulerRegistry.addInterval('organizational-pulse-cache-refresh', interval);
   }
 
   /**
@@ -346,12 +362,10 @@ export class OrganizationalPulseCacheService implements OnModuleInit {
 
   /**
    * Background job to preload organizational pulse data
-   * Runs every 4 hours to keep cache warm
+   * Interval is configurable via ORG_PULSE_CACHE_INTERVAL_MS env var (default: 1 minute)
    *
    * IMPORTANT: This now actually calls the calculation service to populate cache
-   * DISABLED: Cron disabled to reduce server load - cache is warmed on startup
    */
-  // @Cron(CronExpression.EVERY_4_HOURS)
   async preloadOrganizationalPulse(): Promise<void> {
     if (!this.pulseService) {
       this.logger.error('❌ Pulse service not available, cannot preload');

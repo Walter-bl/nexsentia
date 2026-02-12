@@ -556,9 +556,9 @@ export class DashboardController {
     const current = new Date(start.getFullYear(), start.getMonth(), 1);
     const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
 
-    console.log('[groupImpactsByMonthWithHours] Processing', impacts.length, 'impacts from', start, 'to', end);
-    console.log('[groupImpactsByMonthWithHours] Month range:', current, 'to', endMonth);
-    console.log('[groupImpactsByMonthWithHours] TimeRange:', timeRange);
+    // console.log('[groupImpactsByMonthWithHours] Processing', impacts.length, 'impacts from', start, 'to', end);
+    // console.log('[groupImpactsByMonthWithHours] Month range:', current, 'to', endMonth);
+    // console.log('[groupImpactsByMonthWithHours] TimeRange:', timeRange);
 
     while (current <= endMonth) {
       const monthStart = new Date(current);
@@ -569,7 +569,7 @@ export class DashboardController {
         return impactDate >= monthStart && impactDate <= monthEnd;
       });
 
-      console.log('[groupImpactsByMonthWithHours]', monthStart.toISOString().slice(0, 7), ':', monthImpacts.length, 'impacts');
+      // console.log('[groupImpactsByMonthWithHours]', monthStart.toISOString().slice(0, 7), ':', monthImpacts.length, 'impacts');
 
       // Calculate total hours lost for the month
       const monthTotalHours = monthImpacts.reduce((sum, i) => {
@@ -608,7 +608,7 @@ export class DashboardController {
       monthsToShow = 12;
     }
 
-    console.log('[groupImpactsByMonthWithHours] Limiting to', monthsToShow, 'months');
+    // console.log('[groupImpactsByMonthWithHours] Limiting to', monthsToShow, 'months');
     return monthlyData.slice(0, monthsToShow);
   }
 
@@ -993,7 +993,7 @@ export class DashboardController {
       affectedEntities: any;
     }>;
   }> {
-    console.log('[getRecentSignals] Querying weak signals by category for tenant:', tenantId);
+    // console.log('[getRecentSignals] Querying weak signals by category for tenant:', tenantId);
 
     // Query each category separately to ensure representation from all sources
     // This prevents one high-volume source from dominating the results
@@ -1033,11 +1033,11 @@ export class DashboardController {
       }),
     ]);
 
-    console.log('[getRecentSignals] Found signals by category:', {
-      engineering: engineeringSignals.length,
-      operations: operationsSignals.length,
-      communication: communicationSignals.length,
-    });
+    // console.log('[getRecentSignals] Found signals by category:', {
+    //   engineering: engineeringSignals.length,
+    //   operations: operationsSignals.length,
+    //   communication: communicationSignals.length,
+    // });
 
     // Combine all signals
     const allSignals = [...engineeringSignals, ...operationsSignals, ...communicationSignals];
@@ -1065,26 +1065,26 @@ export class DashboardController {
     const gmailSignals = mappedSignals.filter(s => s.source === 'gmail').slice(0, 15);
     const outlookSignals = mappedSignals.filter(s => s.source === 'outlook').slice(0, 15);
 
-    console.log('[getRecentSignals] Source extraction sample (first 3 from each category):');
-    console.log('Engineering:', engineeringSignals.slice(0, 3).map(s => ({
-      id: s.id,
-      category: s.category,
-      description: s.description.substring(0, 50),
-    })));
-    console.log('Operations:', operationsSignals.slice(0, 3).map(s => ({
-      id: s.id,
-      category: s.category,
-      description: s.description.substring(0, 50),
-    })));
+    // console.log('[getRecentSignals] Source extraction sample (first 3 from each category):');
+    // console.log('Engineering:', engineeringSignals.slice(0, 3).map(s => ({
+    //   id: s.id,
+    //   category: s.category,
+    //   description: s.description.substring(0, 50),
+    // })));
+    // console.log('Operations:', operationsSignals.slice(0, 3).map(s => ({
+    //   id: s.id,
+    //   category: s.category,
+    //   description: s.description.substring(0, 50),
+    // })));
 
-    console.log('[getRecentSignals] Final grouped signals:', {
-      jira: jiraSignals.length,
-      servicenow: servicenowSignals.length,
-      slack: slackSignals.length,
-      teams: teamsSignals.length,
-      gmail: gmailSignals.length,
-      outlook: outlookSignals.length,
-    });
+    // console.log('[getRecentSignals] Final grouped signals:', {
+    //   jira: jiraSignals.length,
+    //   servicenow: servicenowSignals.length,
+    //   slack: slackSignals.length,
+    //   teams: teamsSignals.length,
+    //   gmail: gmailSignals.length,
+    //   outlook: outlookSignals.length,
+    // });
 
     // Remove source property before returning
     const removeSource = (signals: any[]) => signals.map(({ source, ...rest }) => rest);
@@ -1334,15 +1334,15 @@ export class DashboardController {
     @Query('periodEnd') periodEnd?: string,
     @Query('timeRange') timeRange?: '7d' | '14d' | '1m' | '3m' | '6m' | '1y',
   ) {
-    console.log(`[DashboardController] Getting team impact dashboard for tenant: ${tenantId}`);
+    // console.log(`[DashboardController] Getting team impact dashboard for tenant: ${tenantId}`);
 
     const { start, end } = this.calculateDateRange(periodStart, periodEnd, timeRange);
-    console.log(`[DashboardController] Date range:`, { start, end, timeRange });
+    // console.log(`[DashboardController] Date range:`, { start, end, timeRange });
 
     const dashboard = await this.teamImpactService.getTeamImpactDashboard(tenantId, start, end);
 
-    console.log(`[DashboardController] Team impact calculated for ${dashboard.teamBreakdown.length} teams`);
-    console.log(`[DashboardController] Total time saved: ${dashboard.totalValue.timeSavedHours} hours`);
+    // console.log(`[DashboardController] Team impact calculated for ${dashboard.teamBreakdown.length} teams`);
+    // console.log(`[DashboardController] Total time saved: ${dashboard.totalValue.timeSavedHours} hours`);
 
     return dashboard;
   }
