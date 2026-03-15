@@ -44,12 +44,12 @@ if ! command -v pm2 &> /dev/null; then
   sudo npm install -g pm2 > /dev/null 2>&1
 fi
 
-# --- 4. MySQL 8 ---
+# --- 4. MariaDB (Rocky Linux default) ---
 if ! command -v mysql &> /dev/null; then
-  echo "==> Installing MySQL 8..."
-  sudo dnf install -y mysql-server > /dev/null 2>&1
-  sudo systemctl enable mysqld
-  sudo systemctl start mysqld
+  echo "==> Installing MariaDB..."
+  sudo dnf install -y mariadb-server > /dev/null 2>&1
+  sudo systemctl enable mariadb
+  sudo systemctl start mariadb
 fi
 
 echo "==> Setting up MySQL database & user..."
