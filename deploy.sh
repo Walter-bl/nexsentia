@@ -65,19 +65,30 @@ echo "    MySQL database: nexsentia_db (user: nexsentia)"
 # --- 5. Redis ---
 if ! command -v redis-server &> /dev/null; then
   echo "==> Installing Redis..."
-  sudo dnf install -y redis > /dev/null 2>&1
+  sudo dnf install -y epel-release > /dev/null 2>&1
+  sudo dnf config-manager --set-enabled crb > /dev/null 2>&1 || true
+  sudo dnf install -y redis > /dev/null 2>&1 || {
+    echo "    Redis not in repos, installing from Remi..."
+    sudo dnf install -y https://rpms.remirepo.net/enterprise/remi-release-10.rpm > /dev/null 2>&1 || true
+    sudo dnf module enable -y redis:remi-7.2 > /dev/null 2>&1 || true
+    sudo dnf install -y redis > /dev/null 2>&1
+  }
   sudo systemctl enable redis
   sudo systemctl start redis
 fi
 
-# --- 6. Firewall (Rocky Linux uses firewalld, not ufw) ---
+# --- 6. Firewall ---
 echo "==> Configuring firewall..."
-sudo systemctl enable firewalld
-sudo systemctl start firewalld
-sudo firewall-cmd --permanent --add-service=http > /dev/null
-sudo firewall-cmd --permanent --add-service=https > /dev/null
-sudo firewall-cmd --permanent --add-service=ssh > /dev/null
-sudo firewall-cmd --reload > /dev/null
+if command -v firewall-cmd &> /dev/null; then
+  sudo systemctl enable firewalld
+  sudo systemctl start firewalld
+  sudo firewall-cmd --permanent --add-service=http > /dev/null
+  sudo firewall-cmd --permanent --add-service=https > /dev/null
+  sudo firewall-cmd --permanent --add-service=ssh > /dev/null
+  sudo firewall-cmd --reload > /dev/null
+else
+  echo "    firewalld not installed — skipping (Hostinger VPS may use iptables or external firewall)"
+fi
 
 # --- 7. Create uploads directory ---
 mkdir -p "$APP_DIR/uploads"
