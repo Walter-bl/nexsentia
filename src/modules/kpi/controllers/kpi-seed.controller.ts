@@ -7,6 +7,7 @@ import { MetricDefinition } from '../entities/metric-definition.entity';
 import { MetricValue } from '../entities/metric-value.entity';
 import { BusinessImpact } from '../entities/business-impact.entity';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { shiftDate } from '../../../database/seeds/utils/date-helper';
 
 @ApiTags('KPI Seeding')
 @Controller('kpi/seed')
@@ -308,8 +309,8 @@ export class KpiSeedController {
           customersAffected: 150,
           usersAffected: 450,
           durationMinutes: 180,
-          impactDate: new Date('2026-01-15 08:30:00'),
-          resolvedDate: new Date('2026-01-15 11:30:00'),
+          impactDate: shiftDate('2026-01-15 08:30:00'),
+          resolvedDate: shiftDate('2026-01-15 11:30:00'),
           severity: 'critical',
           revenueMapping: {
             affectedServices: ['Email Service', 'Calendar'],
@@ -334,7 +335,7 @@ export class KpiSeedController {
             rootCause: 'Exchange server failure',
           },
           isValidated: true,
-          validatedAt: new Date('2026-01-16 10:00:00'),
+          validatedAt: shiftDate('2026-01-16 10:00:00'),
           validatedBy: 1,
           validationNotes: 'Revenue loss validated against customer SLA penalties',
         },
@@ -347,8 +348,8 @@ export class KpiSeedController {
           customersAffected: 80,
           usersAffected: 240,
           durationMinutes: 1440,
-          impactDate: new Date('2026-01-20 14:00:00'),
-          resolvedDate: new Date('2026-01-21 14:00:00'),
+          impactDate: shiftDate('2026-01-20 14:00:00'),
+          resolvedDate: shiftDate('2026-01-21 14:00:00'),
           severity: 'high',
           revenueMapping: {
             affectedServices: ['Payment Gateway'],
@@ -372,7 +373,7 @@ export class KpiSeedController {
             rootCause: 'Payment processor timeout',
           },
           isValidated: true,
-          validatedAt: new Date('2026-01-22 09:00:00'),
+          validatedAt: shiftDate('2026-01-22 09:00:00'),
           validatedBy: 1,
         },
         {
@@ -385,8 +386,8 @@ export class KpiSeedController {
           customersAffected: 45,
           usersAffected: 135,
           durationMinutes: 240,
-          impactDate: new Date('2026-01-25 09:00:00'),
-          resolvedDate: new Date('2026-01-25 13:00:00'),
+          impactDate: shiftDate('2026-01-25 09:00:00'),
+          resolvedDate: shiftDate('2026-01-25 13:00:00'),
           severity: 'high',
           revenueMapping: {
             affectedServices: ['API Gateway'],
@@ -419,8 +420,8 @@ export class KpiSeedController {
           customersAffected: 30,
           usersAffected: 90,
           durationMinutes: 120,
-          impactDate: new Date('2026-02-01 16:00:00'),
-          resolvedDate: new Date('2026-02-01 18:00:00'),
+          impactDate: shiftDate('2026-02-01 16:00:00'),
+          resolvedDate: shiftDate('2026-02-01 18:00:00'),
           severity: 'medium',
           revenueMapping: {
             affectedServices: ['Reporting Dashboard'],
@@ -442,7 +443,7 @@ export class KpiSeedController {
             rootCause: 'Query optimization needed',
           },
           isValidated: true,
-          validatedAt: new Date('2026-02-02 10:00:00'),
+          validatedAt: shiftDate('2026-02-02 10:00:00'),
           validatedBy: 1,
         },
       ];

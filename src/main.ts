@@ -2,12 +2,14 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { ValidationExceptionFilter } from './common/filters/validation-exception.filter';
 import helmet from 'helmet';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
     bodyParser: true,
   });
@@ -37,6 +39,10 @@ async function bootstrap() {
     ],
     exposedHeaders: ['X-Total-Count', 'X-Page-Count'],
   });
+
+  // Serve uploaded files statically
+  const uploadDir = configService.get<string>('UPLOAD_DIR') || './uploads';
+  app.useStaticAssets(join(process.cwd(), uploadDir), { prefix: '/uploads' });
 
   // Global prefix
   const apiPrefix = configService.get<string>('API_PREFIX', 'api/v1');

@@ -2,6 +2,8 @@ import { DataSource } from 'typeorm';
 import { OutlookConnection } from '../../modules/outlook/entities/outlook-connection.entity';
 import { OutlookMailbox } from '../../modules/outlook/entities/outlook-mailbox.entity';
 import { OutlookMessage } from '../../modules/outlook/entities/outlook-message.entity';
+import { refinedOutlookMessages } from './data/outlook-refined.seed';
+import { shiftDate } from './utils/date-helper';
 
 export async function seedOutlookData(dataSource: DataSource, tenantId: number): Promise<void> {
   const connectionRepo = dataSource.getRepository(OutlookConnection);
@@ -184,6 +186,51 @@ export async function seedOutlookData(dataSource: DataSource, tenantId: number):
       metadata: {
         priority: importance === 'high' ? 'urgent' : 'normal',
         category: hasIssueKeyword ? 'incident' : 'general',
+      },
+    });
+  }
+
+  // Add refined messages with realistic corporate content
+  for (let idx = 0; idx < refinedOutlookMessages.length; idx++) {
+    const msg = refinedOutlookMessages[idx];
+    const createdDate = shiftDate(msg.outlookCreatedAt);
+    messages.push({
+      tenantId,
+      mailboxId: inboxMailbox.id,
+      outlookMessageId: `refined_outlook_${idx + 1}_${Date.now()}`,
+      conversationId: `refined_conv_${Math.floor(idx / 2)}_${Date.now()}`,
+      subject: msg.subject,
+      bodyText: msg.bodyText,
+      bodyHtml: `<html><body>${msg.bodyText.replace(/\n/g, '<br>')}</body></html>`,
+      bodyPreview: msg.bodyText.substring(0, 120),
+      fromEmail: msg.fromEmail,
+      fromName: msg.fromName,
+      toRecipients: msg.toRecipients,
+      ccRecipients: (msg as any).ccRecipients || undefined,
+      categories: msg.categories || [],
+      isRead: true,
+      isFlagged: msg.importance === 'high',
+      isImportant: msg.importance === 'high',
+      isDraft: false,
+      importance: msg.importance,
+      hasAttachment: (msg as any).hasAttachment || false,
+      attachments: (msg as any).hasAttachment ? [{
+        id: `att_refined_outlook_${idx}`,
+        name: (msg as any).attachmentName || `report_${idx}.pdf`,
+        contentType: 'application/pdf',
+        size: Math.floor(Math.random() * 1000000) + 50000,
+        isInline: false,
+      }] : undefined,
+      internetMessageId: `<refined_msg${idx}@nexsentia.com>`,
+      webLink: `https://outlook.office.com/mail/refined/${idx}`,
+      sizeBytes: Math.floor(Math.random() * 40000) + 8000,
+      outlookCreatedAt: createdDate,
+      outlookReceivedAt: createdDate,
+      lastModifiedAt: createdDate,
+      lastSyncedAt: new Date(),
+      metadata: {
+        priority: msg.importance === 'high' ? 'urgent' : 'normal',
+        category: msg.categories?.includes('Red Category') ? 'incident' : 'general',
       },
     });
   }

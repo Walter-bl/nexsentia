@@ -1,0 +1,231 @@
+export const refinedGmailMessages = [
+  // INCIDENT: Payment Gateway Outage
+  {
+    subject: 'URGENT: Payment Gateway Down - All Transactions Failing',
+    fromEmail: 'sarah.martinez@nexsentia.com',
+    fromName: 'Sarah Martinez',
+    toRecipients: [{ email: 'engineering@nexsentia.com', name: 'Engineering Team' }],
+    bodyText: 'Team,\n\nWe have a critical production incident. Payment gateway is returning 503 errors for all customers globally. Error rate at 45%. Revenue impact estimated at $50k/hour.\n\nWar room is active now. Join immediately.\n\nRoot cause under investigation — initial logs point to database connection pool exhaustion.\n\nSarah Martinez\nSr. Platform Engineer',
+    gmailCreatedAt: '2025-12-15T14:25:00Z',
+    isImportant: true,
+    labels: ['INBOX', 'IMPORTANT', 'STARRED'],
+    category: 'incident',
+  },
+  {
+    subject: 'RE: URGENT: Payment Gateway Down - All Transactions Failing',
+    fromEmail: 'mike.chen@nexsentia.com',
+    fromName: 'Mike Chen',
+    toRecipients: [{ email: 'engineering@nexsentia.com', name: 'Engineering Team' }],
+    bodyText: 'Confirmed — DB connection pool at 50/50 (100% utilization), 450 connections queued.\n\nIncreasing pool size from 50 to 200 and deploying circuit breaker. Change request CHG0030045 submitted.\n\nETA to fix: ~1 hour.\n\nMike',
+    gmailCreatedAt: '2025-12-15T14:45:00Z',
+    isImportant: true,
+    labels: ['INBOX', 'IMPORTANT'],
+    category: 'incident',
+  },
+  {
+    subject: 'RE: URGENT: Payment Gateway Down - RESOLVED',
+    fromEmail: 'sarah.martinez@nexsentia.com',
+    fromName: 'Sarah Martinez',
+    toRecipients: [{ email: 'engineering@nexsentia.com', name: 'Engineering Team' }, { email: 'cto@nexsentia.com', name: 'CTO' }],
+    bodyText: 'Payment gateway is back online as of 16:45 UTC.\n\nTotal downtime: 2 hours 22 minutes.\nRevenue impact: ~$118k in delayed transactions (all recovered).\nCustomers affected: ~12,500.\n\nFix: Connection pool increased to 200, circuit breaker pattern deployed.\n\nPost-mortem scheduled for tomorrow 10 AM. INC0010001 created.\n\nSarah',
+    gmailCreatedAt: '2025-12-15T16:50:00Z',
+    isImportant: true,
+    labels: ['INBOX', 'IMPORTANT', 'STARRED'],
+    category: 'incident',
+  },
+
+  // API Rate Limiting Issue
+  {
+    subject: 'Enterprise Clients Hitting 429 Errors - Rate Limiting',
+    fromEmail: 'account.manager@nexsentia.com',
+    fromName: 'Account Manager',
+    toRecipients: [{ email: 'mike.chen@nexsentia.com', name: 'Mike Chen' }, { email: 'engineering@nexsentia.com', name: 'Engineering Team' }],
+    bodyText: 'Hi Engineering,\n\n12 enterprise accounts are reporting 429 (Too Many Requests) errors during business hours. Current rate limit of 1000 req/min is not enough for enterprise usage patterns.\n\nAccounts affected include Acme Corp (500+ users) and several other large clients.\n\nThis is causing data sync failures and is becoming a churn risk. Can we prioritize?\n\nThanks',
+    gmailCreatedAt: '2025-12-18T09:20:00Z',
+    isImportant: true,
+    labels: ['INBOX', 'IMPORTANT'],
+    category: 'incident',
+  },
+  {
+    subject: 'RE: Enterprise Clients Hitting 429 Errors - FIXED',
+    fromEmail: 'mike.chen@nexsentia.com',
+    fromName: 'Mike Chen',
+    toRecipients: [{ email: 'account.manager@nexsentia.com', name: 'Account Manager' }, { email: 'engineering@nexsentia.com', name: 'Engineering Team' }],
+    bodyText: 'Tiered rate limiting deployed:\n- Enterprise: 10,000 req/min\n- Business: 5,000 req/min\n- Standard: 1,000 req/min\n\nRedis config updated for distributed rate limiting across API Gateway cluster. All affected clients verified.\n\nINC0010002 closed.\n\nMike',
+    gmailCreatedAt: '2025-12-18T14:25:00Z',
+    isImportant: false,
+    labels: ['INBOX'],
+    category: 'incident',
+  },
+
+  // Q1 Roadmap
+  {
+    subject: 'Q1 2026 Product Roadmap - Final Draft',
+    fromEmail: 'product.manager@nexsentia.com',
+    fromName: 'Lisa Anderson',
+    toRecipients: [{ email: 'engineering@nexsentia.com', name: 'Engineering Team' }, { email: 'leadership@nexsentia.com', name: 'Leadership' }],
+    bodyText: 'Team,\n\nAttaching the final Q1 2026 roadmap for review:\n\n1. Team Impact Dashboard Enhancements (EPIC-15)\n   - Advanced filtering with time ranges\n   - CSV/PDF export\n   - Custom metric definitions\n\n2. Advanced Alert System (EPIC-18)\n   - User customizable preferences\n   - Multi-channel delivery\n   - ML-based anomaly detection\n\n3. Real-time Collaboration (EPIC-19)\n   - Live cursors and presence\n   - Simultaneous editing\n   - Comment threads with @mentions\n\nPlease review and share feedback by Friday.\n\nLisa Anderson\nProduct Manager',
+    gmailCreatedAt: '2026-01-03T14:00:00Z',
+    isImportant: true,
+    labels: ['INBOX', 'IMPORTANT'],
+    category: 'general',
+    hasAttachment: true,
+    attachmentName: 'Q1-2026-Roadmap.pdf',
+  },
+
+  // Dashboard Feature Launch
+  {
+    subject: 'Feature Launch: Advanced Dashboard Filtering (v2.6.0)',
+    fromEmail: 'product.manager@nexsentia.com',
+    fromName: 'Lisa Anderson',
+    toRecipients: [{ email: 'all-hands@nexsentia.com', name: 'All Hands' }],
+    bodyText: 'Excited to announce the release of Advanced Dashboard Filtering!\n\nNew capabilities:\n- Time range filtering (7d, 14d, 1m, 3m, 6m, 1y)\n- Team name search and filtering\n- CSV export for filtered data\n- PDF export with custom date ranges\n\nThis was our #1 customer request — 78% of surveyed users wanted better filtering.\n\nHuge thanks to Alex Johnson for the excellent implementation!\n\nLisa Anderson\nProduct Manager',
+    gmailCreatedAt: '2026-01-28T16:00:00Z',
+    isImportant: false,
+    labels: ['INBOX'],
+    category: 'general',
+  },
+
+  // Dashboard Performance Issue
+  {
+    subject: 'Dashboard Performance Degradation - Peak Hours',
+    fromEmail: 'user.feedback@nexsentia.com',
+    fromName: 'User Feedback',
+    toRecipients: [{ email: 'engineering@nexsentia.com', name: 'Engineering Team' }],
+    bodyText: 'Multiple users reporting dashboard load times of 15-20 seconds during business hours (9 AM - 5 PM EST).\n\nAffected users: ~450\nStarted: Today around 11:30 AM EST\n\nPrevious load time was ~2 seconds. This needs immediate investigation.\n\nTicket #5923 created.',
+    gmailCreatedAt: '2026-01-25T11:35:00Z',
+    isImportant: true,
+    labels: ['INBOX', 'IMPORTANT'],
+    category: 'incident',
+  },
+  {
+    subject: 'RE: Dashboard Performance Degradation - RESOLVED',
+    fromEmail: 'mike.chen@nexsentia.com',
+    fromName: 'Mike Chen',
+    toRecipients: [{ email: 'engineering@nexsentia.com', name: 'Engineering Team' }],
+    bodyText: 'Indexes deployed. Query time reduced from 8s to 0.3s.\n\nRoot cause: Missing composite indexes on alert_history table — (tenantId, createdAt) and (ruleId, status).\n\nDashboard loading under 2 seconds again. INC0010003 closed.\n\nMike',
+    gmailCreatedAt: '2026-01-26T12:05:00Z',
+    isImportant: false,
+    labels: ['INBOX'],
+    category: 'incident',
+  },
+
+  // Security Incident
+  {
+    subject: 'SECURITY ALERT: Brute Force Attack Detected',
+    fromEmail: 'security.team@nexsentia.com',
+    fromName: 'Security Team',
+    toRecipients: [{ email: 'engineering@nexsentia.com', name: 'Engineering Team' }, { email: 'cto@nexsentia.com', name: 'CTO' }],
+    bodyText: 'SIEM detected brute force attack targeting admin accounts:\n\n- 1,500 failed login attempts in 2 hours\n- Source: IP range 185.220.x.x (known bot network)\n- Target: Admin-level user accounts\n\nImmediate actions taken:\n1. IP range 185.220.0.0/16 blocked at WAF\n2. Progressive rate limiting enabled (5 attempts/15 min)\n3. Password reset forced for targeted accounts\n\nNo successful unauthorized access detected.\n\nINC0010011 created. Full incident report to follow tomorrow.',
+    gmailCreatedAt: '2026-01-30T20:20:00Z',
+    isImportant: true,
+    labels: ['INBOX', 'IMPORTANT', 'STARRED'],
+    category: 'incident',
+  },
+
+  // Email Alert Issue
+  {
+    subject: 'BUG: Email Notifications Not Delivered for Critical Alerts',
+    fromEmail: 'ops.team@nexsentia.com',
+    fromName: 'Ops Team',
+    toRecipients: [{ email: 'sarah.martinez@nexsentia.com', name: 'Sarah Martinez' }, { email: 'engineering@nexsentia.com', name: 'Engineering Team' }],
+    bodyText: 'High and critical severity alerts are not sending email notifications.\n\nEmail service logs show "SMTP connection timeout after 30 seconds". Tested with multiple SMTP providers — same error.\n\nSlack/Teams notifications are working correctly — only email is affected.\n\nAffected users: ~85\n\nBUG-235 created. INC0010004 opened.',
+    gmailCreatedAt: '2026-02-05T08:50:00Z',
+    isImportant: true,
+    labels: ['INBOX', 'IMPORTANT'],
+    category: 'incident',
+  },
+  {
+    subject: 'RE: BUG: Email Notifications - Working with Resend Support',
+    fromEmail: 'sarah.martinez@nexsentia.com',
+    fromName: 'Sarah Martinez',
+    toRecipients: [{ email: 'ops.team@nexsentia.com', name: 'Ops Team' }, { email: 'engineering@nexsentia.com', name: 'Engineering Team' }],
+    bodyText: 'Update: Confirmed SMTP connection timeout issue. Working with Resend support team.\n\nETA for resolution: 24-48 hours.\n\nWorkaround: Critical alerts still delivered via Slack and Teams channels.\n\nSarah',
+    gmailCreatedAt: '2026-02-05T10:20:00Z',
+    isImportant: false,
+    labels: ['INBOX'],
+    category: 'incident',
+  },
+
+  // SSL Certificate
+  {
+    subject: 'WARNING: SSL Certificates Expiring in 14 Days',
+    fromEmail: 'monitoring@nexsentia.com',
+    fromName: 'Monitoring System',
+    toRecipients: [{ email: 'devops@nexsentia.com', name: 'DevOps Team' }],
+    bodyText: 'Automated alert: SSL certificates expiring soon.\n\nDomains affected:\n- api.nexsentia.com (expires Jan 31)\n- dashboard.nexsentia.com (expires Jan 31)\n\nAutomated renewal failed — DNS validation timeout.\n\nManual renewal required urgently to prevent service disruption.',
+    gmailCreatedAt: '2026-01-17T06:05:00Z',
+    isImportant: true,
+    labels: ['INBOX', 'IMPORTANT'],
+    category: 'incident',
+  },
+
+  // Sprint Planning
+  {
+    subject: 'Sprint 26 Planning Summary (Feb 3-14)',
+    fromEmail: 'sarah.martinez@nexsentia.com',
+    fromName: 'Sarah Martinez',
+    toRecipients: [{ email: 'engineering@nexsentia.com', name: 'Engineering Team' }],
+    bodyText: 'Sprint 26 is locked in:\n\nGoal: Complete alert customization and improve Slack ingestion performance.\n\nCommitted stories:\n1. STORY-890: User customizable alert preferences (8 pts) - Alex\n2. IMP-123: Optimize Slack ingestion (8 pts) - Mike\n3. BUG-235: Fix email alert delivery (2 pts) - Sarah\n4. IMP-124: Add OpenTelemetry tracing (5 pts) - David\n\nTotal capacity: 32 pts | Committed: 23 pts | Buffer: 9 pts\n\nDaily standups at 9:30 AM as usual.',
+    gmailCreatedAt: '2026-02-03T15:05:00Z',
+    isImportant: false,
+    labels: ['INBOX'],
+    category: 'general',
+  },
+
+  // Acme Corp Feedback
+  {
+    subject: 'Customer Feedback: Acme Corp Quarterly Review',
+    fromEmail: 'support.lead@nexsentia.com',
+    fromName: 'Tom Baker',
+    toRecipients: [{ email: 'product.manager@nexsentia.com', name: 'Lisa Anderson' }, { email: 'engineering@nexsentia.com', name: 'Engineering Team' }],
+    bodyText: 'Summary from Acme Corp (500+ users) quarterly review:\n\nOverall satisfaction: 8/10\n\nPositive:\n- Dashboard metrics valuable for leadership reporting\n- Weak signal detection catching issues early\n- Alert system preventing incidents\n\nImprovement areas:\n- Higher API rate limits (hitting 429 errors)\n- Bulk user import from CSV\n- SSO with Okta integration\n- Custom branding for white-label\n\nAction items:\n1. Rate limiting escalation to engineering (urgent)\n2. CSV import → product roadmap\n3. SSO implementation timeline discussion\n\nTom Baker\nCustomer Success Lead',
+    gmailCreatedAt: '2025-12-18T10:05:00Z',
+    isImportant: true,
+    labels: ['INBOX', 'IMPORTANT'],
+    category: 'general',
+    hasAttachment: true,
+    attachmentName: 'Acme-Corp-Quarterly-Review.pdf',
+  },
+
+  // Real-time Collaboration
+  {
+    subject: 'Architecture Proposal: Real-time Collaboration System',
+    fromEmail: 'david.park@nexsentia.com',
+    fromName: 'David Park',
+    toRecipients: [{ email: 'engineering@nexsentia.com', name: 'Engineering Team' }],
+    bodyText: 'Sharing my architecture proposal for FEAT-457 (real-time collaboration):\n\nProposed stack:\n- WebSocket Layer: Socket.IO (with long-polling fallback)\n- Conflict Resolution: Yjs (CRDT-based)\n- State Sync: Y-WebSocket provider\n- Backend: NestJS WebSocket Gateway\n\nKey features:\n1. Live cursor positions with user avatars\n2. Operational transformation for text editing\n3. Presence awareness\n4. Comment threads with @mentions\n5. Conflict-free merging\n\nEstimate: 13 story points (2-3 sprints)\n\nFull doc attached. Feedback welcome.\n\nDavid',
+    gmailCreatedAt: '2026-01-20T10:00:00Z',
+    isImportant: false,
+    labels: ['INBOX'],
+    category: 'general',
+    hasAttachment: true,
+    attachmentName: 'Real-time-Collaboration-Architecture.pdf',
+  },
+
+  // Performance Optimization
+  {
+    subject: 'Slack Ingestion Optimization Progress Update',
+    fromEmail: 'mike.chen@nexsentia.com',
+    fromName: 'Mike Chen',
+    toRecipients: [{ email: 'engineering@nexsentia.com', name: 'Engineering Team' }],
+    bodyText: 'Update on IMP-123 (Slack ingestion optimization):\n\nCurrent: 500 msgs/min\nTarget: 5,000 msgs/min\n\nApproach:\n- Batch inserts (100 messages per batch)\n- 5 parallel Bull queue workers\n- Redis cache for deduplication\n\nInitial benchmarks showing 3,200 msgs/min after batch processing alone. Adding parallel workers should get us past 5k.\n\nWill share final numbers by end of sprint.\n\nMike',
+    gmailCreatedAt: '2026-02-07T11:25:00Z',
+    isImportant: false,
+    labels: ['INBOX'],
+    category: 'general',
+  },
+
+  // Database Backup Issue
+  {
+    subject: 'Storage Audit: Backup Retention Policy Not Applied',
+    fromEmail: 'devops@nexsentia.com',
+    fromName: 'DevOps Team',
+    toRecipients: [{ email: 'infrastructure.lead@nexsentia.com', name: 'Infrastructure Lead' }],
+    bodyText: 'During routine storage audit, found that backup retention policy (30 days) is not being enforced.\n\nCurrent state: 6 months of daily backups in S3 bucket.\nExpected: Only 30 days retained.\n\nUnnecessary storage costs accumulating. Need to:\n1. Create proper S3 lifecycle policy\n2. Test in staging\n3. Apply to production\n\nINC0010010 created for tracking.',
+    gmailCreatedAt: '2026-02-06T10:05:00Z',
+    isImportant: false,
+    labels: ['INBOX'],
+    category: 'incident',
+  },
+];

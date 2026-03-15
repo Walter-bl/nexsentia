@@ -2,6 +2,8 @@ import { DataSource } from 'typeorm';
 import { GmailConnection } from '../../modules/gmail/entities/gmail-connection.entity';
 import { GmailMailbox } from '../../modules/gmail/entities/gmail-mailbox.entity';
 import { GmailMessage } from '../../modules/gmail/entities/gmail-message.entity';
+import { refinedGmailMessages } from './data/gmail-refined.seed';
+import { shiftDate } from './utils/date-helper';
 
 export async function seedGmailData(dataSource: DataSource, tenantId: number): Promise<void> {
   const connectionRepo = dataSource.getRepository(GmailConnection);
@@ -174,6 +176,48 @@ export async function seedGmailData(dataSource: DataSource, tenantId: number): P
       metadata: {
         priority: isImportant ? 'high' : 'normal',
         category: hasIssueKeyword ? 'incident' : 'general',
+      },
+    });
+  }
+
+  // Add refined messages with realistic content
+  for (let idx = 0; idx < refinedGmailMessages.length; idx++) {
+    const msg = refinedGmailMessages[idx];
+    const createdDate = shiftDate(msg.gmailCreatedAt);
+    messages.push({
+      tenantId,
+      mailboxId: inboxMailbox.id,
+      gmailMessageId: `refined_gmail_${idx + 1}_${Date.now()}`,
+      gmailThreadId: `refined_thread_${Math.floor(idx / 2)}_${Date.now()}`,
+      subject: msg.subject,
+      bodyText: msg.bodyText,
+      bodyHtml: msg.bodyText.replace(/\n/g, '<br>'),
+      snippet: msg.bodyText.substring(0, 100),
+      fromEmail: msg.fromEmail,
+      fromName: msg.fromName,
+      toRecipients: msg.toRecipients,
+      labels: msg.labels || ['INBOX'],
+      isRead: true,
+      isStarred: msg.labels?.includes('STARRED') || false,
+      isImportant: msg.isImportant || false,
+      isDraft: false,
+      isSent: false,
+      isTrash: false,
+      isSpam: false,
+      hasAttachment: (msg as any).hasAttachment || false,
+      attachments: (msg as any).hasAttachment ? [{
+        partId: `part_refined_${idx}`,
+        filename: (msg as any).attachmentName || `document_${idx}.pdf`,
+        mimeType: 'application/pdf',
+        size: Math.floor(Math.random() * 500000) + 50000,
+        attachmentId: `att_refined_${idx}`,
+      }] : undefined,
+      sizeBytes: Math.floor(Math.random() * 30000) + 5000,
+      gmailCreatedAt: createdDate,
+      lastSyncedAt: new Date(),
+      metadata: {
+        priority: msg.isImportant ? 'high' : 'normal',
+        category: msg.category || 'general',
       },
     });
   }

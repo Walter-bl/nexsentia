@@ -38,6 +38,9 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 
+# Uploads
+/uploads
+
 # Temporary files
 *.swp
 *.swo

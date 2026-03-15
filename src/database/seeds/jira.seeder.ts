@@ -3,6 +3,7 @@ import { JiraConnection } from '../../modules/jira/entities/jira-connection.enti
 import { JiraProject } from '../../modules/jira/entities/jira-project.entity';
 import { JiraIssue } from '../../modules/jira/entities/jira-issue.entity';
 import { refinedJiraIssues } from './data/jira-refined.seed';
+import { shiftDate, shiftDateNullable } from './utils/date-helper';
 
 export async function seedJiraData(dataSource: DataSource, tenantId: number): Promise<void> {
   const jiraConnectionRepo = dataSource.getRepository(JiraConnection);
@@ -145,9 +146,9 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
     assigneeDisplayName: issue.assignee.split('@')[0].replace('.', ' '),
     reporterAccountId: issue.reporter,
     reporterDisplayName: issue.reporter.split('@')[0].replace('.', ' '),
-    jiraCreatedAt: new Date(issue.created),
-    jiraUpdatedAt: new Date(issue.updated),
-    resolvedAt: issue.resolved ? new Date(issue.resolved) : undefined,
+    jiraCreatedAt: shiftDate(issue.created),
+    jiraUpdatedAt: shiftDate(issue.updated),
+    resolvedAt: issue.resolved ? shiftDate(issue.resolved) : undefined,
     storyPoints: issue.storyPoints || undefined,
     labels: issue.labels,
     components: issue.components?.map((comp, idx) => ({ id: `comp_${idx}`, name: comp })),
@@ -246,9 +247,9 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       assigneeDisplayName: 'Alice Johnson',
       reporterAccountId: 'user_008',
       reporterDisplayName: 'Bob Wilson',
-      jiraCreatedAt: new Date('2026-01-15 08:30:00'),
-      jiraUpdatedAt: new Date('2026-01-15 14:20:00'),
-      resolvedAt: new Date('2026-01-15 14:20:00'),
+      jiraCreatedAt: shiftDate('2026-01-15 08:30:00'),
+      jiraUpdatedAt: shiftDate('2026-01-15 14:20:00'),
+      resolvedAt: shiftDate('2026-01-15 14:20:00'),
     },
     {
       projectId: prodProject!.id,
@@ -263,9 +264,9 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       assigneeDisplayName: 'Charlie Brown',
       reporterAccountId: 'user_001',
       reporterDisplayName: 'John Smith',
-      jiraCreatedAt: new Date('2026-01-28 10:15:00'),
-      jiraUpdatedAt: new Date('2026-01-28 11:45:00'),
-      resolvedAt: new Date('2026-01-28 11:45:00'),
+      jiraCreatedAt: shiftDate('2026-01-28 10:15:00'),
+      jiraUpdatedAt: shiftDate('2026-01-28 11:45:00'),
+      resolvedAt: shiftDate('2026-01-28 11:45:00'),
     },
     {
       projectId: prodProject!.id,
@@ -280,7 +281,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       assigneeDisplayName: 'Diana Prince',
       reporterAccountId: 'user_002',
       reporterDisplayName: 'Eve Davis',
-      jiraCreatedAt: new Date('2026-02-01 14:22:00'),
+      jiraCreatedAt: shiftDate('2026-02-01 14:22:00'),
       jiraUpdatedAt: new Date(),
     },
     // Engineering stories
@@ -298,7 +299,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       reporterAccountId: 'user_001',
       reporterDisplayName: 'John Smith',
       storyPoints: 8,
-      jiraCreatedAt: new Date('2026-01-20 09:00:00'),
+      jiraCreatedAt: shiftDate('2026-01-20 09:00:00'),
       jiraUpdatedAt: new Date(),
     },
     {
@@ -315,9 +316,9 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       reporterAccountId: 'user_001',
       reporterDisplayName: 'John Smith',
       storyPoints: 13,
-      jiraCreatedAt: new Date('2026-01-10 10:30:00'),
-      jiraUpdatedAt: new Date('2026-01-25 15:45:00'),
-      resolvedAt: new Date('2026-01-25 15:45:00'),
+      jiraCreatedAt: shiftDate('2026-01-10 10:30:00'),
+      jiraUpdatedAt: shiftDate('2026-01-25 15:45:00'),
+      resolvedAt: shiftDate('2026-01-25 15:45:00'),
     },
     // More Production incidents
     {
@@ -333,7 +334,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       assigneeDisplayName: 'Charlie Brown',
       reporterAccountId: 'user_001',
       reporterDisplayName: 'John Smith',
-      jiraCreatedAt: new Date('2026-02-03 06:15:00'),
+      jiraCreatedAt: shiftDate('2026-02-03 06:15:00'),
       jiraUpdatedAt: new Date(),
     },
     {
@@ -349,8 +350,8 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       assigneeDisplayName: 'Diana Prince',
       reporterAccountId: 'user_008',
       reporterDisplayName: 'Bob Wilson',
-      jiraCreatedAt: new Date('2026-02-01 09:00:00'),
-      jiraUpdatedAt: new Date('2026-02-01 09:00:00'),
+      jiraCreatedAt: shiftDate('2026-02-01 09:00:00'),
+      jiraUpdatedAt: shiftDate('2026-02-01 09:00:00'),
     },
     {
       projectId: prodProject!.id,
@@ -365,9 +366,9 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       assigneeDisplayName: 'Charlie Brown',
       reporterAccountId: 'user_002',
       reporterDisplayName: 'Eve Davis',
-      jiraCreatedAt: new Date('2026-01-28 14:30:00'),
-      jiraUpdatedAt: new Date('2026-01-29 11:20:00'),
-      resolvedAt: new Date('2026-01-29 11:20:00'),
+      jiraCreatedAt: shiftDate('2026-01-28 14:30:00'),
+      jiraUpdatedAt: shiftDate('2026-01-29 11:20:00'),
+      resolvedAt: shiftDate('2026-01-29 11:20:00'),
     },
     // More Engineering stories
     {
@@ -384,7 +385,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       reporterAccountId: 'user_001',
       reporterDisplayName: 'John Smith',
       storyPoints: 5,
-      jiraCreatedAt: new Date('2026-01-25 10:00:00'),
+      jiraCreatedAt: shiftDate('2026-01-25 10:00:00'),
       jiraUpdatedAt: new Date(),
     },
     {
@@ -401,8 +402,8 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       reporterAccountId: 'user_001',
       reporterDisplayName: 'John Smith',
       storyPoints: 8,
-      jiraCreatedAt: new Date('2026-02-01 09:30:00'),
-      jiraUpdatedAt: new Date('2026-02-01 09:30:00'),
+      jiraCreatedAt: shiftDate('2026-02-01 09:30:00'),
+      jiraUpdatedAt: shiftDate('2026-02-01 09:30:00'),
     },
     {
       projectId: platformProject!.id,
@@ -418,9 +419,9 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       reporterAccountId: 'user_007',
       reporterDisplayName: 'Grace Hopper',
       storyPoints: 3,
-      jiraCreatedAt: new Date('2026-01-05 11:00:00'),
-      jiraUpdatedAt: new Date('2026-01-15 16:30:00'),
-      resolvedAt: new Date('2026-01-15 16:30:00'),
+      jiraCreatedAt: shiftDate('2026-01-05 11:00:00'),
+      jiraUpdatedAt: shiftDate('2026-01-15 16:30:00'),
+      resolvedAt: shiftDate('2026-01-15 16:30:00'),
     },
     {
       projectId: platformProject!.id,
@@ -436,7 +437,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       reporterAccountId: 'user_001',
       reporterDisplayName: 'John Smith',
       storyPoints: 5,
-      jiraCreatedAt: new Date('2026-01-22 13:15:00'),
+      jiraCreatedAt: shiftDate('2026-01-22 13:15:00'),
       jiraUpdatedAt: new Date(),
     },
     {
@@ -452,9 +453,9 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       assigneeDisplayName: 'Diana Prince',
       reporterAccountId: 'user_001',
       reporterDisplayName: 'John Smith',
-      jiraCreatedAt: new Date('2026-01-08 09:45:00'),
-      jiraUpdatedAt: new Date('2026-01-18 14:20:00'),
-      resolvedAt: new Date('2026-01-18 14:20:00'),
+      jiraCreatedAt: shiftDate('2026-01-08 09:45:00'),
+      jiraUpdatedAt: shiftDate('2026-01-18 14:20:00'),
+      resolvedAt: shiftDate('2026-01-18 14:20:00'),
     },
     // Support tickets
     {
@@ -470,9 +471,9 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       assigneeDisplayName: 'Helen Keller',
       reporterAccountId: 'user_010',
       reporterDisplayName: 'Ian Malcolm',
-      jiraCreatedAt: new Date('2026-01-30 11:20:00'),
-      jiraUpdatedAt: new Date('2026-01-30 14:10:00'),
-      resolvedAt: new Date('2026-01-30 14:10:00'),
+      jiraCreatedAt: shiftDate('2026-01-30 11:20:00'),
+      jiraUpdatedAt: shiftDate('2026-01-30 14:10:00'),
+      resolvedAt: shiftDate('2026-01-30 14:10:00'),
     },
     {
       projectId: opsProject!.id,
@@ -487,7 +488,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       assigneeDisplayName: 'Frank Miller',
       reporterAccountId: 'user_010',
       reporterDisplayName: 'Ian Malcolm',
-      jiraCreatedAt: new Date('2026-02-02 08:45:00'),
+      jiraCreatedAt: shiftDate('2026-02-02 08:45:00'),
       jiraUpdatedAt: new Date(),
     },
     {
@@ -503,8 +504,8 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       assigneeDisplayName: 'Helen Keller',
       reporterAccountId: 'user_010',
       reporterDisplayName: 'Ian Malcolm',
-      jiraCreatedAt: new Date('2026-02-03 10:15:00'),
-      jiraUpdatedAt: new Date('2026-02-03 10:15:00'),
+      jiraCreatedAt: shiftDate('2026-02-03 10:15:00'),
+      jiraUpdatedAt: shiftDate('2026-02-03 10:15:00'),
     },
     {
       projectId: opsProject!.id,
@@ -519,7 +520,7 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       assigneeDisplayName: 'Frank Miller',
       reporterAccountId: 'user_010',
       reporterDisplayName: 'Ian Malcolm',
-      jiraCreatedAt: new Date('2026-02-02 15:30:00'),
+      jiraCreatedAt: shiftDate('2026-02-02 15:30:00'),
       jiraUpdatedAt: new Date(),
     },
     {
@@ -535,9 +536,9 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       assigneeDisplayName: 'Helen Keller',
       reporterAccountId: 'user_010',
       reporterDisplayName: 'Ian Malcolm',
-      jiraCreatedAt: new Date('2026-01-29 09:00:00'),
-      jiraUpdatedAt: new Date('2026-01-31 12:45:00'),
-      resolvedAt: new Date('2026-01-31 12:45:00'),
+      jiraCreatedAt: shiftDate('2026-01-29 09:00:00'),
+      jiraUpdatedAt: shiftDate('2026-01-31 12:45:00'),
+      resolvedAt: shiftDate('2026-01-31 12:45:00'),
     },
     {
       projectId: opsProject!.id,
@@ -552,9 +553,9 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       assigneeDisplayName: 'Frank Miller',
       reporterAccountId: 'user_010',
       reporterDisplayName: 'Ian Malcolm',
-      jiraCreatedAt: new Date('2026-01-27 14:20:00'),
-      jiraUpdatedAt: new Date('2026-01-28 10:30:00'),
-      resolvedAt: new Date('2026-01-28 10:30:00'),
+      jiraCreatedAt: shiftDate('2026-01-27 14:20:00'),
+      jiraUpdatedAt: shiftDate('2026-01-28 10:30:00'),
+      resolvedAt: shiftDate('2026-01-28 10:30:00'),
     },
     {
       projectId: opsProject!.id,
@@ -569,8 +570,8 @@ export async function seedJiraData(dataSource: DataSource, tenantId: number): Pr
       assigneeDisplayName: 'Helen Keller',
       reporterAccountId: 'user_010',
       reporterDisplayName: 'Ian Malcolm',
-      jiraCreatedAt: new Date('2026-02-03 08:00:00'),
-      jiraUpdatedAt: new Date('2026-02-03 08:00:00'),
+      jiraCreatedAt: shiftDate('2026-02-03 08:00:00'),
+      jiraUpdatedAt: shiftDate('2026-02-03 08:00:00'),
     },
   ];
 

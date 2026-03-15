@@ -7,7 +7,6 @@ import appConfig from './config/app.config';
 import databaseConfig from './config/database/database.config';
 import jwtConfig from './config/security/jwt.config';
 import bcryptConfig from './config/security/bcrypt.config';
-import s3Config from './config/storage/s3.config';
 import emailConfig from './config/email/email.config';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -33,7 +32,7 @@ import { AuditLoggingInterceptor } from './common/interceptors/audit-logging.int
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, databaseConfig, jwtConfig, bcryptConfig, s3Config, emailConfig],
+      load: [appConfig, databaseConfig, jwtConfig, bcryptConfig, emailConfig],
       envFilePath: ['.env.local', '.env'],
     }),
 

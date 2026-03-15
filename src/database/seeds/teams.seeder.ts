@@ -4,6 +4,7 @@ import { TeamsChannel } from '../../modules/teams/entities/teams-channel.entity'
 import { TeamsMessage } from '../../modules/teams/entities/teams-message.entity';
 import { TeamsUser } from '../../modules/teams/entities/teams-user.entity';
 import { refinedTeamsChannels, refinedTeamsUsers, refinedTeamsMessages } from './data/teams-refined.seed';
+import { shiftDate } from './utils/date-helper';
 
 export async function seedTeamsData(dataSource: DataSource, tenantId: number): Promise<void> {
   const teamsConnectionRepo = dataSource.getRepository(TeamsConnection);
@@ -274,8 +275,8 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
       contentType: 'html',
       messageType: 'message',
       importance: 'normal',
-      createdDateTime: new Date('2026-02-01 09:30:00'),
-      lastModifiedDateTime: new Date('2026-02-01 09:30:00'),
+      createdDateTime: shiftDate('2026-02-01 09:30:00'),
+      lastModifiedDateTime: shiftDate('2026-02-01 09:30:00'),
     },
     {
       channelId: engineeringChannel!.id,
@@ -287,8 +288,8 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
       contentType: 'html',
       messageType: 'message',
       importance: 'normal',
-      createdDateTime: new Date('2026-01-30 15:45:00'),
-      lastModifiedDateTime: new Date('2026-01-30 15:45:00'),
+      createdDateTime: shiftDate('2026-01-30 15:45:00'),
+      lastModifiedDateTime: shiftDate('2026-01-30 15:45:00'),
     },
     {
       channelId: supportChannel!.id,
@@ -300,8 +301,8 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
       contentType: 'html',
       messageType: 'message',
       importance: 'urgent',
-      createdDateTime: new Date('2026-02-02 11:20:00'),
-      lastModifiedDateTime: new Date('2026-02-02 11:20:00'),
+      createdDateTime: shiftDate('2026-02-02 11:20:00'),
+      lastModifiedDateTime: shiftDate('2026-02-02 11:20:00'),
     },
     {
       channelId: generalChannel!.id,
@@ -313,8 +314,8 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
       contentType: 'html',
       messageType: 'message',
       importance: 'normal',
-      createdDateTime: new Date('2026-02-01 10:00:00'),
-      lastModifiedDateTime: new Date('2026-02-01 10:00:00'),
+      createdDateTime: shiftDate('2026-02-01 10:00:00'),
+      lastModifiedDateTime: shiftDate('2026-02-01 10:00:00'),
     },
     {
       channelId: engineeringChannel!.id,
@@ -326,8 +327,8 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
       contentType: 'html',
       messageType: 'message',
       importance: 'normal',
-      createdDateTime: new Date('2026-02-02 08:15:00'),
-      lastModifiedDateTime: new Date('2026-02-02 08:15:00'),
+      createdDateTime: shiftDate('2026-02-02 08:15:00'),
+      lastModifiedDateTime: shiftDate('2026-02-02 08:15:00'),
     },
     {
       channelId: supportChannel!.id,
@@ -339,8 +340,8 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
       contentType: 'html',
       messageType: 'message',
       importance: 'normal',
-      createdDateTime: new Date('2026-02-03 09:30:00'),
-      lastModifiedDateTime: new Date('2026-02-03 09:30:00'),
+      createdDateTime: shiftDate('2026-02-03 09:30:00'),
+      lastModifiedDateTime: shiftDate('2026-02-03 09:30:00'),
     },
     {
       channelId: engineeringChannel!.id,
@@ -352,8 +353,8 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
       contentType: 'html',
       messageType: 'message',
       importance: 'normal',
-      createdDateTime: new Date('2026-01-28 14:00:00'),
-      lastModifiedDateTime: new Date('2026-01-28 14:00:00'),
+      createdDateTime: shiftDate('2026-01-28 14:00:00'),
+      lastModifiedDateTime: shiftDate('2026-01-28 14:00:00'),
     },
     {
       channelId: generalChannel!.id,
@@ -365,8 +366,8 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
       contentType: 'html',
       messageType: 'message',
       importance: 'normal',
-      createdDateTime: new Date('2026-02-03 11:00:00'),
-      lastModifiedDateTime: new Date('2026-02-03 11:00:00'),
+      createdDateTime: shiftDate('2026-02-03 11:00:00'),
+      lastModifiedDateTime: shiftDate('2026-02-03 11:00:00'),
     },
     {
       channelId: supportChannel!.id,
@@ -378,8 +379,8 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
       contentType: 'html',
       messageType: 'message',
       importance: 'normal',
-      createdDateTime: new Date('2026-02-03 14:20:00'),
-      lastModifiedDateTime: new Date('2026-02-03 14:20:00'),
+      createdDateTime: shiftDate('2026-02-03 14:20:00'),
+      lastModifiedDateTime: shiftDate('2026-02-03 14:20:00'),
     },
     {
       channelId: engineeringChannel!.id,
@@ -391,8 +392,8 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
       contentType: 'html',
       messageType: 'message',
       importance: 'normal',
-      createdDateTime: new Date('2026-01-31 16:30:00'),
-      lastModifiedDateTime: new Date('2026-01-31 16:30:00'),
+      createdDateTime: shiftDate('2026-01-31 16:30:00'),
+      lastModifiedDateTime: shiftDate('2026-01-31 16:30:00'),
     },
   ];
 
@@ -412,8 +413,8 @@ export async function seedTeamsData(dataSource: DataSource, tenantId: number): P
     messageType: msg.messageType,
     replyToId: msg.replyToId,
     importance: msg.importance,
-    createdDateTime: new Date(msg.createdDateTime),
-    lastModifiedDateTime: new Date(msg.lastModifiedDateTime),
+    createdDateTime: shiftDate(msg.createdDateTime),
+    lastModifiedDateTime: shiftDate(msg.lastModifiedDateTime),
     reactions: msg.reactions,
     mentions: msg.mentions,
     attachments: msg.attachments,
