@@ -214,9 +214,12 @@ npm ci --quiet
 echo "==> Building application..."
 npm run build
 
-# --- 10. Run migrations ---
+# --- 10. Run migrations & seeders ---
 echo "==> Running database migrations..."
 npm run migration:run:prod
+
+echo "==> Running seeders..."
+npm run seed:prod
 
 # --- 11. Nginx (Rocky Linux uses /etc/nginx/conf.d/) ---
 echo "==> Configuring Nginx..."
@@ -250,7 +253,11 @@ sudo nginx -t && sudo systemctl enable nginx && sudo systemctl restart nginx
 
 # --- 12. SSL ---
 echo "==> Obtaining SSL certificate..."
-sudo certbot --nginx -d "${DOMAIN}" --non-interactive --agree-tos -m "${EMAIL}"
+sudo certbot --nginx -d "${DOMAIN}" --non-interactive --agree-tos -m "${EMAIL}" || {
+  echo "    SSL failed — DNS may not be pointing to this server yet."
+  echo "    Add an A record: backend -> $(curl -s ifconfig.me)"
+  echo "    Then run: sudo certbot --nginx -d ${DOMAIN} --non-interactive --agree-tos -m ${EMAIL}"
+}
 
 # Auto-renewal timer (Rocky Linux uses systemd timer, not cron)
 sudo systemctl enable certbot-renew.timer 2>/dev/null || \

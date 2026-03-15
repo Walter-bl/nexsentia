@@ -1,6 +1,9 @@
 name: Deploy to Hostinger VPS
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 env:
@@ -47,6 +50,9 @@ jobs:
 
             echo "==> Running migrations..."
             npm run migration:run:prod
+
+            echo "==> Running seeders..."
+            npm run seed:prod
 
             echo "==> Reloading PM2 (zero-downtime)..."
             pm2 reload nexsentia
